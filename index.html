@@ -894,7 +894,14 @@
         const MAX_USERS = 20;
         function createWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            return new WebSocket(`${protocol}//${window.location.host}`);
+            const socket = new WebSocket(`${protocol}//${window.location.host}`);
+            socket.addEventListener('error', () => {
+                console.error('WebSocket error', {
+                    url: socket.url,
+                    readyState: socket.readyState
+                });
+            });
+            return socket;
         }
 
         function createServerConnection(socket, clientId) {
@@ -1719,8 +1726,12 @@
                     };
                     connections[c.peer] = c;
                 } else if (message.type === 'client_data') {
-                    const c = connections[message.from];
-                    if (c) handleHostReceivedData(c, message.data);
+                    let c = connections[message.from];
+                    if (!c) {
+                        c = createServerConnection(socket, message.from);
+                        connections[message.from] = c;
+                    }
+                    handleHostReceivedData(c, message.data);
                 } else if (message.type === 'client_left') {
                     const c = connections[message.clientId];
                     if (c) {
@@ -2513,6 +2524,7 @@
                 if (message.type === 'connected') {
                     myPeerId = message.clientId;
                     hostConn.open = true;
+                } else if (message.type === 'client_ready') {
                     hostConn.send({
                         type: 'join',
                         nick: myNick,
@@ -2541,6 +2553,16 @@
                 alert('Não foi possível conectar ao servidor WebSocket.');
                 setControlsState(false);
             };
+            window.setTimeout(() => {
+                if (socket.readyState !== WebSocket.OPEN || !hostConn.open) {
+                    connectionRejected = true;
+                    setControlsState(false);
+                    alert('O servidor não confirmou a entrada na sala. Verifique o domínio do Railway e tente novamente.');
+                    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                        socket.close();
+                    }
+                }
+            }, 10000);
         }
 
         function handleClientReceivedData(data) {

@@ -123,6 +123,7 @@ websocketServer.on('connection', (socket) => {
             room.clients.set(client.clientId, client);
             send(socket, { type: 'connected', clientId: client.clientId });
             send(room.host.socket, { type: 'client_joined', clientId: client.clientId });
+            send(socket, { type: 'client_ready' });
             return;
         }
 
