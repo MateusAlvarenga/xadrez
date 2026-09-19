@@ -894,6 +894,18 @@
         let playerQueenThemes = {};
 
         const MAX_USERS = 20;
+        const PEER_SERVER_OPTIONS = {
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true
+        };
+
+        function createPeer(id = undefined) {
+            return id === undefined
+                ? new Peer(PEER_SERVER_OPTIONS)
+                : new Peer(id, PEER_SERVER_OPTIONS);
+        }
 
         const cpuDialogues = {
             start: [
@@ -1648,7 +1660,7 @@
             setControlsState(true);
             document.getElementById('roomDisplay').innerHTML = '⏳ <strong>PREPARANDO SALA</strong> | Conectando à arena...';
 
-            peer = customCode ? new Peer(customCode) : new Peer();
+            peer = customCode ? createPeer(customCode) : createPeer();
 
             peer.on('open', (id) => {
                 myPeerId = id;
@@ -1675,6 +1687,9 @@
             peer.on('error', (err) => {
                 if (err.type === 'unavailable-id') { alert('Código de sala já em uso!'); startOffline('local'); }
                 else alert('Erro: ' + err.message);
+            });
+            peer.on('disconnected', () => {
+                if (peer && !peer.destroyed) peer.reconnect();
             });
 
             peer.on('connection', (c) => {
@@ -2427,7 +2442,7 @@
             document.getElementById('chatMessages').innerHTML = '';
             document.getElementById('roomDisplay').innerHTML = '⏳ <strong>ENTRANDO NA ARENA</strong> | Conectando à sala...';
             connectionRejected = false;
-            peer = new Peer();
+            peer = createPeer();
 
             peer.on('open', (id) => {
                 myPeerId = id;
@@ -2452,6 +2467,9 @@
                 let message = err && err.message ? err.message : 'Não foi possível conectar à sala.';
                 alert(`Erro ao conectar à sala: ${message}`);
                 setControlsState(false);
+            });
+            peer.on('disconnected', () => {
+                if (peer && !peer.destroyed) peer.reconnect();
             });
         }
 
