@@ -762,8 +762,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
     <script>
         // Web Audio API
         let audioCtx = null;
@@ -894,17 +892,28 @@
         let playerQueenThemes = {};
 
         const MAX_USERS = 20;
-        const PEER_SERVER_OPTIONS = {
-            host: '0.peerjs.com',
-            port: 443,
-            path: '/',
-            secure: true
-        };
+        function createWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return new WebSocket(`${protocol}//${window.location.host}`);
+        }
 
-        function createPeer(id = undefined) {
-            return id === undefined
-                ? new Peer(PEER_SERVER_OPTIONS)
-                : new Peer(id, PEER_SERVER_OPTIONS);
+        function createServerConnection(socket, clientId) {
+            return {
+                peer: clientId,
+                open: true,
+                replaced: false,
+                send(data) {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'data', to: clientId, data }));
+                    }
+                },
+                close() {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'close_client', to: clientId }));
+                    }
+                    this.open = false;
+                }
+            };
         }
 
         const cpuDialogues = {
@@ -1587,7 +1596,8 @@
         }
 
         function resetPeer() {
-            if (peer) { peer.destroy(); peer = null; }
+            if (peer && peer.readyState === WebSocket.OPEN) peer.close();
+            peer = null;
             connections = {};
             userNicks = {};
             playerQueenThemes = {};
@@ -1660,48 +1670,70 @@
             setControlsState(true);
             document.getElementById('roomDisplay').innerHTML = '⏳ <strong>PREPARANDO SALA</strong> | Conectando à arena...';
 
-            peer = customCode ? createPeer(customCode) : createPeer();
+            peer = createWebSocket();
 
-            peer.on('open', (id) => {
-                myPeerId = id;
-                saveOnlineSession(id, true);
-                activeWhite = myPeerId;
-                userNicks[myPeerId] = myNick;
-                playerQueenThemes[myPeerId] = selectedQueenTheme;
-                initPlayerScore(myPeerId);
-                myRole = 'w';
+            peer.onopen = () => {
+                peer.send(JSON.stringify({ type: 'create_room', roomId: customCode }));
+            };
 
-                let display = document.getElementById('roomDisplay');
-                display.style.display = 'block';
-                display.innerHTML = `⏳ <strong>SALA (${escapeHtml(myNick)})</strong> | Código: <mark>${id}</mark>`;
-                
-                updateRoomState();
-                initBoard('white');
-                addChatMessage('', `Sala criada por ${myNick}. Aguardando jogadores...`, 'system');
-                if (!queenSettingsOpenedForRoom) {
-                    queenSettingsOpenedForRoom = true;
-                    openQueenSettings();
-                }
-            });
-
-            peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') { alert('Código de sala já em uso!'); startOffline('local'); }
-                else alert('Erro: ' + err.message);
-            });
-            peer.on('disconnected', () => {
-                if (peer && !peer.destroyed) peer.reconnect();
-            });
-
-            peer.on('connection', (c) => {
-                if (Object.keys(connections).length >= MAX_USERS - 1) {
-                    c.on('open', () => { c.send({ type: 'error', text: 'Sala cheia!' }); setTimeout(() => c.close(), 500); });
+            peer.onmessage = (event) => {
+                let message;
+                try {
+                    message = JSON.parse(event.data);
+                } catch {
                     return;
                 }
-                c.on('data', (data) => handleHostReceivedData(c, data));
-                c.on('close', () => {
-                    if (!c.replaced) handleUserDisconnect(c.peer);
-                });
-            });
+
+                if (message.type === 'room_created') {
+                    myPeerId = message.roomId;
+                    saveOnlineSession(myPeerId, true);
+                    activeWhite = myPeerId;
+                    userNicks[myPeerId] = myNick;
+                    playerQueenThemes[myPeerId] = selectedQueenTheme;
+                    initPlayerScore(myPeerId);
+                    myRole = 'w';
+
+                    let display = document.getElementById('roomDisplay');
+                    display.style.display = 'block';
+                    display.innerHTML = `⏳ <strong>SALA (${escapeHtml(myNick)})</strong> | Código: <mark>${message.roomId}</mark>`;
+
+                    updateRoomState();
+                    initBoard('white');
+                    addChatMessage('', `Sala criada por ${myNick}. Aguardando jogadores...`, 'system');
+                    if (!queenSettingsOpenedForRoom) {
+                        queenSettingsOpenedForRoom = true;
+                        openQueenSettings();
+                    }
+                } else if (message.type === 'client_joined') {
+                    const c = createServerConnection(peer, message.clientId);
+                    if (Object.keys(connections).length >= MAX_USERS - 1) {
+                        c.send({ type: 'error', text: 'Sala cheia!' });
+                        setTimeout(() => c.close(), 500);
+                        return;
+                    }
+                    c.onClose = () => {
+                        if (!c.replaced) handleUserDisconnect(c.peer);
+                    };
+                    connections[c.peer] = c;
+                } else if (message.type === 'client_data') {
+                    const c = connections[message.from];
+                    if (c) handleHostReceivedData(c, message.data);
+                } else if (message.type === 'client_left') {
+                    const c = connections[message.clientId];
+                    if (c) {
+                        c.open = false;
+                        if (!c.replaced) handleUserDisconnect(c.peer);
+                    }
+                } else if (message.type === 'error') {
+                    alert(message.text || 'Erro na sala.');
+                    if (message.text === 'Código de sala já está em uso.') startOffline('local');
+                }
+            };
+
+            peer.onerror = () => {
+                alert('Não foi possível conectar ao servidor WebSocket.');
+                setControlsState(false);
+            };
         }
 
         function startTournament() {
@@ -2442,35 +2474,63 @@
             document.getElementById('chatMessages').innerHTML = '';
             document.getElementById('roomDisplay').innerHTML = '⏳ <strong>ENTRANDO NA ARENA</strong> | Conectando à sala...';
             connectionRejected = false;
-            peer = createPeer();
-
-            peer.on('open', (id) => {
-                myPeerId = id;
-                hostConn = peer.connect(roomId);
-
-                hostConn.on('open', () => hostConn.send({
-                    type: 'join',
-                    nick: myNick,
-                    sessionToken: getSessionToken(),
-                    queenTheme: selectedQueenTheme
-                }));
-                hostConn.on('data', (data) => handleClientReceivedData(data));
-                hostConn.on('close', () => {
-                    setControlsState(false);
-                    if (!connectionRejected) {
-                        addChatMessage('', 'Conexão perdida com a sala.', 'system');
+            peer = createWebSocket();
+            hostConn = {
+                open: false,
+                send(data) {
+                    if (peer && peer.readyState === WebSocket.OPEN) {
+                        peer.send(JSON.stringify({ type: 'data', data }));
                     }
-                });
-            });
+                },
+                close() {
+                    if (peer) peer.close();
+                    this.open = false;
+                }
+            };
 
-            peer.on('error', (err) => {
-                let message = err && err.message ? err.message : 'Não foi possível conectar à sala.';
-                alert(`Erro ao conectar à sala: ${message}`);
+            peer.onopen = () => {
+                peer.send(JSON.stringify({
+                    type: 'join_room',
+                    roomId,
+                    nick: myNick
+                }));
+            };
+            peer.onmessage = (event) => {
+                let message;
+                try {
+                    message = JSON.parse(event.data);
+                } catch {
+                    return;
+                }
+                if (message.type === 'connected') {
+                    myPeerId = message.clientId;
+                    hostConn.open = true;
+                    hostConn.send({
+                        type: 'join',
+                        nick: myNick,
+                        sessionToken: getSessionToken(),
+                        queenTheme: selectedQueenTheme
+                    });
+                } else if (message.type === 'data') {
+                    handleClientReceivedData(message.data);
+                } else if (message.type === 'error') {
+                    connectionRejected = true;
+                    alert(message.text || 'Não foi possível conectar à sala.');
+                    setControlsState(false);
+                    if (peer) peer.close();
+                }
+            };
+            peer.onclose = () => {
+                hostConn.open = false;
                 setControlsState(false);
-            });
-            peer.on('disconnected', () => {
-                if (peer && !peer.destroyed) peer.reconnect();
-            });
+                if (!connectionRejected) {
+                    addChatMessage('', 'Conexão perdida com a sala.', 'system');
+                }
+            };
+            peer.onerror = () => {
+                alert('Não foi possível conectar ao servidor WebSocket.');
+                setControlsState(false);
+            };
         }
 
         function handleClientReceivedData(data) {

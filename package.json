@@ -2,8 +2,11 @@
   "name": "railway-static-site",
   "version": "1.0.0",
   "private": true,
-  "description": "Static HTML/CSS/JS site for Railway",
+  "description": "Chess game with a Node.js WebSocket server for Railway",
   "scripts": {
     "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   }
 }

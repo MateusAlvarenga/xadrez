@@ -1,6 +1,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { WebSocketServer } = require('ws');
 
 const root = __dirname;
 const port = Number.parseInt(process.env.PORT || '3000', 10);
@@ -50,11 +52,120 @@ const server = http.createServer((request, response) => {
     });
 });
 
+const websocketServer = new WebSocketServer({ server });
+const rooms = new Map();
+const MAX_USERS = 20;
+
+function send(socket, message) {
+    if (socket.readyState === 1) {
+        socket.send(JSON.stringify(message));
+    }
+}
+
+function makeRoomId() {
+    let roomId;
+    do {
+        roomId = crypto.randomBytes(3).toString('hex').toUpperCase();
+    } while (rooms.has(roomId));
+    return roomId;
+}
+
+websocketServer.on('connection', (socket) => {
+    const client = { socket, roomId: null, clientId: null, isHost: false };
+
+    socket.on('message', (rawMessage) => {
+        let message;
+        try {
+            message = JSON.parse(rawMessage.toString());
+        } catch {
+            send(socket, { type: 'error', text: 'Mensagem inválida.' });
+            return;
+        }
+
+        if (message.type === 'create_room') {
+            if (client.roomId) return;
+            const requestedRoomId = typeof message.roomId === 'string'
+                ? message.roomId.trim().toUpperCase()
+                : '';
+            const roomId = requestedRoomId || makeRoomId();
+            if (!/^[A-Z0-9_-]{3,24}$/.test(roomId)) {
+                send(socket, { type: 'error', text: 'Código de sala inválido.' });
+                return;
+            }
+            if (rooms.has(roomId)) {
+                send(socket, { type: 'error', text: 'Código de sala já está em uso.' });
+                return;
+            }
+            client.roomId = roomId;
+            client.clientId = roomId;
+            client.isHost = true;
+            rooms.set(roomId, { host: client, clients: new Map() });
+            send(socket, { type: 'room_created', roomId });
+            return;
+        }
+
+        if (message.type === 'join_room') {
+            if (client.roomId) return;
+            const roomId = typeof message.roomId === 'string'
+                ? message.roomId.trim().toUpperCase()
+                : '';
+            const room = rooms.get(roomId);
+            if (!room) {
+                send(socket, { type: 'error', text: 'Sala não encontrada ou encerrada.' });
+                return;
+            }
+            if (room.clients.size >= MAX_USERS - 1) {
+                send(socket, { type: 'error', text: 'Sala cheia!' });
+                return;
+            }
+            client.roomId = roomId;
+            client.clientId = crypto.randomBytes(9).toString('base64url');
+            room.clients.set(client.clientId, client);
+            send(socket, { type: 'connected', clientId: client.clientId });
+            send(room.host.socket, { type: 'client_joined', clientId: client.clientId });
+            return;
+        }
+
+        const room = client.roomId ? rooms.get(client.roomId) : null;
+        if (!room) {
+            send(socket, { type: 'error', text: 'Conexão ainda não está em uma sala.' });
+            return;
+        }
+
+        if (client.isHost && message.type === 'data') {
+            const target = room.clients.get(message.to);
+            if (target) send(target.socket, { type: 'data', data: message.data });
+        } else if (!client.isHost && message.type === 'data') {
+            send(room.host.socket, {
+                type: 'client_data',
+                from: client.clientId,
+                data: message.data
+            });
+        } else if (client.isHost && message.type === 'close_client') {
+            const target = room.clients.get(message.to);
+            if (target) target.socket.close();
+        }
+    });
+
+    socket.on('close', () => {
+        if (!client.roomId) return;
+        const room = rooms.get(client.roomId);
+        if (!room) return;
+        if (client.isHost) {
+            room.clients.forEach((otherClient) => otherClient.socket.close());
+            rooms.delete(client.roomId);
+        } else {
+            room.clients.delete(client.clientId);
+            send(room.host.socket, { type: 'client_left', clientId: client.clientId });
+        }
+    });
+});
+
 server.on('error', (error) => {
     console.error('Unable to start HTTP server:', error);
     process.exitCode = 1;
 });
 
 server.listen(port, '0.0.0.0', () => {
-    console.log(`Static server listening on port ${port}`);
+    console.log(`HTTP and WebSocket server listening on port ${port}`);
 });

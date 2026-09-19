@@ -27,7 +27,16 @@ O comando de inicialização é:
 
 O Railway fornece a variável `$PORT` automaticamente.
 
-O modo online usa o PeerJS Cloud diretamente no navegador. O Railway serve apenas
-os arquivos estáticos; ele não precisa (e não deve) fazer proxy de WebSocket ou
-hospedar um PeerServer. O cliente está configurado para usar `0.peerjs.com` em
-TLS na porta 443, inclusive quando a página é publicada em HTTPS.
+O modo online usa WebSocket nativo no navegador e o servidor Node.js mantém as
+salas e encaminha as mensagens entre os jogadores. O mesmo processo serve os
+arquivos estáticos e o endpoint WebSocket, usando a porta `$PORT` fornecida pelo
+Railway. Em produção, o navegador usa automaticamente `wss://` quando o domínio
+está em HTTPS.
+
+Para instalar as dependências localmente:
+
+`npm install`
+
+Para iniciar:
+
+`npm start`
