@@ -1,0 +1,12 @@
+{
+  "name": "railway-static-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static HTML/CSS/JS site for Railway",
+  "scripts": {
+    "start": "serve . -l $PORT"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}
