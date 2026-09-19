@@ -1670,13 +1670,16 @@
             setControlsState(true);
             document.getElementById('roomDisplay').innerHTML = '⏳ <strong>PREPARANDO SALA</strong> | Conectando à arena...';
 
-            peer = createWebSocket();
+            const socket = createWebSocket();
+            peer = socket;
 
-            peer.onopen = () => {
-                peer.send(JSON.stringify({ type: 'create_room', roomId: customCode }));
+            socket.onopen = () => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'create_room', roomId: customCode }));
+                }
             };
 
-            peer.onmessage = (event) => {
+            socket.onmessage = (event) => {
                 let message;
                 try {
                     message = JSON.parse(event.data);
@@ -1705,7 +1708,7 @@
                         openQueenSettings();
                     }
                 } else if (message.type === 'client_joined') {
-                    const c = createServerConnection(peer, message.clientId);
+                    const c = createServerConnection(socket, message.clientId);
                     if (Object.keys(connections).length >= MAX_USERS - 1) {
                         c.send({ type: 'error', text: 'Sala cheia!' });
                         setTimeout(() => c.close(), 500);
@@ -1730,7 +1733,7 @@
                 }
             };
 
-            peer.onerror = () => {
+            socket.onerror = () => {
                 alert('Não foi possível conectar ao servidor WebSocket.');
                 setControlsState(false);
             };
@@ -2474,28 +2477,33 @@
             document.getElementById('chatMessages').innerHTML = '';
             document.getElementById('roomDisplay').innerHTML = '⏳ <strong>ENTRANDO NA ARENA</strong> | Conectando à sala...';
             connectionRejected = false;
-            peer = createWebSocket();
+            const socket = createWebSocket();
+            peer = socket;
             hostConn = {
                 open: false,
                 send(data) {
-                    if (peer && peer.readyState === WebSocket.OPEN) {
-                        peer.send(JSON.stringify({ type: 'data', data }));
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'data', data }));
                     }
                 },
                 close() {
-                    if (peer) peer.close();
+                    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                        socket.close();
+                    }
                     this.open = false;
                 }
             };
 
-            peer.onopen = () => {
-                peer.send(JSON.stringify({
-                    type: 'join_room',
-                    roomId,
-                    nick: myNick
-                }));
+            socket.onopen = () => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'join_room',
+                        roomId,
+                        nick: myNick
+                    }));
+                }
             };
-            peer.onmessage = (event) => {
+            socket.onmessage = (event) => {
                 let message;
                 try {
                     message = JSON.parse(event.data);
@@ -2517,17 +2525,19 @@
                     connectionRejected = true;
                     alert(message.text || 'Não foi possível conectar à sala.');
                     setControlsState(false);
-                    if (peer) peer.close();
+                    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                        socket.close();
+                    }
                 }
             };
-            peer.onclose = () => {
+            socket.onclose = () => {
                 hostConn.open = false;
                 setControlsState(false);
                 if (!connectionRejected) {
                     addChatMessage('', 'Conexão perdida com a sala.', 'system');
                 }
             };
-            peer.onerror = () => {
+            socket.onerror = () => {
                 alert('Não foi possível conectar ao servidor WebSocket.');
                 setControlsState(false);
             };
