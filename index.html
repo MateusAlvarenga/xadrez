@@ -833,7 +833,7 @@
 
         // Cada opção define as imagens da rainha branca e preta.
         const queenThemes = {
-            default: {
+            padrao: {
                 white: 'https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png',
                 black: 'https://chessboardjs.com/img/chesspieces/wikipedia/bQ.png'
             },
@@ -890,7 +890,7 @@
         let queenSettingsOpenedForRoom = false;
         let selectedQueenTheme = queenThemes[localStorage.getItem('chessQueenTheme')]
             ? localStorage.getItem('chessQueenTheme')
-            : 'default';
+            : 'padrao';
         let playerQueenThemes = {};
 
         const MAX_USERS = 20;
@@ -1324,11 +1324,11 @@
         }
 
         function getQueenThemeForPlayer(playerId) {
-            return queenThemes[playerQueenThemes[playerId]] || queenThemes.default;
+            return queenThemes[playerQueenThemes[playerId]] || queenThemes.padrao;
         }
 
         function getDisplayedQueenTheme(color) {
-            if (mode !== 'online') return queenThemes[selectedQueenTheme] || queenThemes.default;
+            if (mode !== 'online') return queenThemes[selectedQueenTheme] || queenThemes.padrao;
             let displayedMatch = getTournamentMatch();
             let playerId = color === 'w'
                 ? displayedMatch?.whitePlayer || activeWhite
@@ -1348,12 +1348,12 @@
             select.innerHTML = Object.keys(queenThemes)
                 .map(theme => `<option value="${escapeHtml(theme)}">${escapeHtml(theme)}</option>`)
                 .join('');
-            select.value = queenThemes[selectedQueenTheme] ? selectedQueenTheme : 'default';
+            select.value = queenThemes[selectedQueenTheme] ? selectedQueenTheme : 'padrao';
             updateQueenPreview();
         }
 
         function updateQueenPreview() {
-            const theme = queenThemes[document.getElementById('queenThemeSelect')?.value] || queenThemes.default;
+            const theme = queenThemes[document.getElementById('queenThemeSelect')?.value] || queenThemes.padrao;
             document.getElementById('queenPreviewWhite').src = theme.white;
             document.getElementById('queenPreviewBlack').src = theme.black;
         }
@@ -2021,12 +2021,12 @@
                 } else {
                     connections[c.peer] = c;
                     userNicks[c.peer] = requestedNick;
-                    playerQueenThemes[c.peer] = queenThemes[data.queenTheme] ? data.queenTheme : 'default';
+                    playerQueenThemes[c.peer] = queenThemes[data.queenTheme] ? data.queenTheme : 'padrao';
                     sessionTokens[c.peer] = c.sessionToken;
                     initPlayerScore(c.peer);
                 }
                 if (reconnectingPeerId) {
-                    playerQueenThemes[c.peer] = queenThemes[data.queenTheme] ? data.queenTheme : 'default';
+                    playerQueenThemes[c.peer] = queenThemes[data.queenTheme] ? data.queenTheme : 'padrao';
                 }
 
                 if (!reconnectingPeerId && !tournamentActive) {
@@ -2338,7 +2338,7 @@
             delete sessionTokens[oldPeerId];
             connections[newPeerId] = conn;
             userNicks[newPeerId] = nick;
-            playerQueenThemes[newPeerId] = playerQueenThemes[oldPeerId] || 'tati';
+            playerQueenThemes[newPeerId] = playerQueenThemes[oldPeerId] || 'padrao';
             delete playerQueenThemes[oldPeerId];
             sessionTokens[newPeerId] = conn.sessionToken;
 
