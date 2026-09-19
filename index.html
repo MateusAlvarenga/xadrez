@@ -2524,7 +2524,6 @@
                 if (message.type === 'connected') {
                     myPeerId = message.clientId;
                     hostConn.open = true;
-                } else if (message.type === 'client_ready') {
                     hostConn.send({
                         type: 'join',
                         nick: myNick,
@@ -2554,10 +2553,10 @@
                 setControlsState(false);
             };
             window.setTimeout(() => {
-                if (socket.readyState !== WebSocket.OPEN || !hostConn.open) {
+                if (socket.readyState !== WebSocket.OPEN) {
                     connectionRejected = true;
                     setControlsState(false);
-                    alert('O servidor não confirmou a entrada na sala. Verifique o domínio do Railway e tente novamente.');
+                    alert('Não foi possível manter a conexão WebSocket com o Railway. Verifique o domínio público e tente novamente.');
                     if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
                         socket.close();
                     }

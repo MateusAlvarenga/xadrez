@@ -121,9 +121,8 @@ websocketServer.on('connection', (socket) => {
             client.roomId = roomId;
             client.clientId = crypto.randomBytes(9).toString('base64url');
             room.clients.set(client.clientId, client);
-            send(socket, { type: 'connected', clientId: client.clientId });
             send(room.host.socket, { type: 'client_joined', clientId: client.clientId });
-            send(socket, { type: 'client_ready' });
+            send(socket, { type: 'connected', clientId: client.clientId });
             return;
         }
 
