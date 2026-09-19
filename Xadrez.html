@@ -1,0 +1,2547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Xadrez Web - Torneio & Modo Computador IA</title>
+    <!-- CSS do Tabuleiro -->
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e24;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            min-height: 100vh;
+        }
+
+        h1 { 
+            margin-top: 2px;
+            margin-bottom: 10px; 
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .hero {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .hero-kicker {
+            color: #f77f00;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .hero-subtitle {
+            margin: 4px 0 0;
+            color: #c7c9d6;
+            font-size: 13px;
+        }
+
+        .controls {
+            background: #2b2d42;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .online-lobby {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .online-lobby > .nick-input {
+            flex: 1 1 180px;
+        }
+
+        .lobby-action {
+            border: 1px solid #4a4e69;
+            background: #343750;
+        }
+
+        .lobby-action input {
+            min-width: 0;
+        }
+
+        .lobby-action button {
+            background: #008cba;
+        }
+
+        .offline-options {
+            width: 100%;
+            margin-top: 2px;
+            border-top: 1px solid #4a4e69;
+            padding-top: 8px;
+        }
+
+        .offline-options summary {
+            color: #aeb2c5;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+            user-select: none;
+        }
+
+        .offline-options summary:hover {
+            color: #ffffff;
+        }
+
+        .offline-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .offline-actions > * {
+            flex: 1;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            background: #3d405b;
+            padding: 4px 8px;
+            border-radius: 6px;
+            width: 100%;
+        }
+
+        .control-group input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .control-group button {
+            flex: 1;
+            white-space: nowrap;
+        }
+
+        button, input, select {
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 13px;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover { background-color: #45a049; }
+        .btn-alt { background-color: #008cba; }
+        .btn-alt:hover { background-color: #007bA7; }
+        .btn-cpu { background-color: #9c27b0; color: #fff; }
+        .btn-cpu:hover { background-color: #7b1fa2; }
+        .btn-tournament { background-color: #f77f00; color: #fff; }
+        .btn-tournament:hover { background-color: #d66800; }
+        .btn-danger { background-color: #e63946; }
+        .btn-danger:hover { background-color: #d62828; }
+        button:disabled { background-color: #555 !important; cursor: not-allowed; }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(10, 11, 20, 0.78);
+        }
+
+        .modal-backdrop.open { display: flex; }
+
+        .modal-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 24px;
+            border: 1px solid #f77f00;
+            border-radius: 12px;
+            background: #2b2d42;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+        }
+
+        .modal-card h2 {
+            margin: 0 0 18px;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .modal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 14px;
+            color: #e0e1dd;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .modal-field select { width: 100%; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+        .modal-actions button { flex: 1; }
+        .modal-winner-trophy { font-size: 64px; text-align: center; }
+        .modal-winner-name { color: #ffd166; font-size: 25px; text-align: center; font-weight: 800; }
+        .modal-winner-text { margin: 8px 0 0; text-align: center; color: #e0e1dd; }
+        .queen-settings-button {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: #6c63ff;
+        }
+        .queen-settings-button:hover { background: #574fd6; }
+        .queen-preview {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin: 8px 0 18px;
+        }
+        .queen-preview img { width: 52px; height: 52px; object-fit: contain; background: #f0d9b5; border-radius: 6px; }
+
+        input, select { background: #fff; color: #333; outline: none; }
+        .nick-input { border: 2px solid #4caf50; font-weight: bold; }
+
+        #roomDisplay {
+            background: linear-gradient(135deg, #3d405b, #303349);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: none;
+            text-align: center;
+            border: 1px solid #f77f00;
+            width: 100%;
+            max-width: 800px;
+            word-break: break-all;
+            font-size: 13px;
+            box-shadow: 0 0 18px rgba(247, 127, 0, 0.18);
+        }
+
+        body.online-mode #roomDisplay {
+            display: block;
+        }
+
+        body.online-mode .hero-subtitle {
+            color: #ffd6a3;
+        }
+
+        body.online-mode .controls {
+            border: 1px solid #f77f00;
+        }
+
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: flex-start;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .board-wrapper {
+            width: 100%;
+            max-width: min(450px, 88vw);
+            margin: 0 auto;
+            touch-action: none !important;
+        }
+
+        .board-column {
+            width: 100%;
+            max-width: min(450px, 88vw);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .match-banner {
+            width: 100%;
+            padding: 13px 16px;
+            border: 2px solid #f77f00;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #4a4e69, #2b2d42);
+            box-shadow: 0 5px 14px rgba(0, 0, 0, 0.35);
+            text-align: center;
+        }
+
+        .match-banner-label {
+            color: #f5c27a;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        .match-banner-players {
+            margin-top: 3px;
+            font-size: 21px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .match-player {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            vertical-align: middle;
+        }
+
+        .color-dot {
+            display: inline-block;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            flex: 0 0 13px;
+            vertical-align: middle;
+        }
+
+        .color-dot.white {
+            background: #f4f4f4;
+            border: 2px solid #aeb2c5;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+        }
+
+        .color-dot.black {
+            background: #171821;
+            border: 2px solid #f4f4f4;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+        }
+
+        .match-banner-turn {
+            margin-top: 5px;
+            color: #d9dbea;
+            font-size: 12px;
+        }
+
+        .match-clock {
+            margin-top: 8px;
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .match-clock.warning {
+            color: #ffb4a2;
+            animation: clock-pulse 1s infinite;
+        }
+
+        @keyframes clock-pulse {
+            50% { opacity: 0.55; }
+        }
+
+        /* PREVENÇÃO DE ROLAGEM DA TELA AO ARRASTAR AS PEÇAS */
+        #board, #board * {
+            touch-action: none !important;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #board {
+            width: 100% !important;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 340px;
+            max-width: 100%;
+        }
+
+        .panel {
+            background: #2b2d42;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: #3d405b;
+            padding: 8px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 13px;
+            border-bottom: 1px solid #4a4e69;
+        }
+
+        #userList, #bracketDisplay, #scoreTableContainer {
+            padding: 8px;
+            max-height: 130px;
+            overflow-y: auto;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .user-badge, .bracket-match {
+            background: #3d405b;
+            padding: 6px 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bracket-match.active {
+            border: 2px solid #f77f00;
+            background: #4a4e69;
+        }
+
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .score-table th, .score-table td {
+            padding: 5px 3px;
+            border-bottom: 1px solid #3d405b;
+        }
+
+        .score-table th { background: #3d405b; color: #e0e1dd; }
+        .score-table td.pts { font-weight: bold; color: #f77f00; }
+
+        .user-role {
+            font-weight: bold;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .role-w { background: #e0e1dd; color: #1e1e24; }
+        .role-b { background: #1e1e24; color: #fff; border: 1px solid #fff; }
+        .role-spec { background: #8d99ae; color: #1e1e24; }
+
+        .user-remove {
+            padding: 3px 6px;
+            font-size: 10px;
+            background: #e63946;
+        }
+
+        .chat-container {
+            height: 200px;
+            width: 100%;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chat-msg {
+            background: #3d405b;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            word-wrap: break-word;
+        }
+
+        .chat-msg.system {
+            background: #8d99ae;
+            color: #1e1e24;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .chat-msg.me { background: #007bA7; align-self: flex-end; }
+
+        .chat-input-area {
+            display: flex;
+            padding: 6px;
+            background: #1e1e24;
+            gap: 6px;
+        }
+
+        .chat-input-area input { flex: 1; min-width: 0; }
+
+        #status {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            background: #2b2d42;
+            padding: 8px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 4px; }
+            h1 { font-size: 18px; margin-bottom: 8px; }
+            
+            .controls {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                padding: 8px;
+            }
+
+            #nickInput {
+                grid-column: span 2;
+                width: 100%;
+            }
+
+            .online-lobby {
+                display: contents;
+            }
+
+            .online-lobby > .nick-input {
+                grid-column: span 2;
+            }
+
+            .offline-actions {
+                flex-direction: column;
+            }
+
+            .control-group {
+                grid-column: span 2;
+                display: flex;
+                width: 100%;
+                gap: 6px;
+            }
+
+            .control-group input {
+                flex: 1;
+                min-width: 0;
+                width: 50%;
+            }
+
+            .control-group button {
+                flex: 1;
+                width: 50%;
+            }
+
+            .control-group select {
+                flex: 1;
+            }
+
+            button {
+                width: 100%;
+                font-size: 12px;
+                padding: 8px 4px;
+            }
+
+            .board-wrapper {
+                max-width: min(85vw, 360px);
+            }
+
+            .board-column {
+                max-width: min(85vw, 360px);
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="queen-settings-button" type="button" style="display: none;" onclick="openQueenSettings()" aria-label="Configurar sua rainha">♕ Minha rainha</button>
+
+    <div class="hero">
+        <div class="hero-kicker">Arena online</div>
+        <h1>Xadrez Web</h1>
+        <p class="hero-subtitle">Entre em uma sala, dispute partidas e avance no torneio.</p>
+    </div>
+
+    <div class="controls">
+        <div class="online-lobby">
+            <input type="text" id="nickInput" class="nick-input" placeholder="Seu nickname" value="Jogador">
+
+            <div class="control-group lobby-action">
+                <input type="text" id="createRoomIdInput" placeholder="Código opcional">
+                <button onclick="createOnlineRoom()">Criar sala</button>
+            </div>
+
+            <div class="control-group lobby-action">
+                <input type="text" id="joinRoomIdInput" placeholder="Código da sala">
+                <button onclick="joinOnlineRoom()">Entrar na sala</button>
+            </div>
+        </div>
+
+        <button id="startTournamentBtn" class="btn-tournament" onclick="startTournament()" style="display:none; grid-column: span 2;">🏆 Iniciar Torneio</button>
+        <button id="endTournamentBtn" class="btn-danger" onclick="endTournament()" style="display:none; grid-column: span 2;">⏹ Encerrar Torneio</button>
+        <button id="resignBtn" class="btn-danger" onclick="resignGame()" disabled style="grid-column: span 2;">Desistir</button>
+
+        <details class="offline-options">
+            <summary>Mais opções · jogar offline</summary>
+            <div class="offline-actions">
+                <div class="control-group">
+                    <label for="colorSelect" style="font-size: 12px; font-weight: bold; white-space: nowrap;">Cor:</label>
+                    <select id="colorSelect" style="width: 100%;">
+                        <option value="w">♔ Brancas</option>
+                        <option value="b">♚ Pretas</option>
+                        <option value="random">🎲 Aleatória</option>
+                    </select>
+                </div>
+                <button onclick="startOffline('local')">Offline Local</button>
+                <button class="btn-cpu" onclick="startOffline('cpu')">🤖 Jogar vs IA</button>
+            </div>
+        </details>
+    </div>
+
+    <div id="roomDisplay"></div>
+
+    <div class="main-container">
+        <div class="board-column">
+            <div class="match-banner" id="matchBanner">
+                <div class="match-banner-label">Partida atual</div>
+                <div class="match-banner-players" id="matchBannerPlayers">Aguardando jogadores</div>
+                <div class="match-banner-turn" id="matchBannerTurn">Entre em uma sala para começar</div>
+                <div class="match-clock" id="matchClock" aria-label="Relógio da partida">—</div>
+            </div>
+
+            <div class="board-wrapper">
+                <div id="board"></div>
+            </div>
+
+            <div class="panel chat-container">
+                <div class="panel-header">Bate-Papo da Sala</div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-msg system">Entre numa sala para conversar.</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Digite uma mensagem..." disabled onkeydown="if(event.key==='Enter') sendChatMessage()">
+                    <button id="chatBtn" onclick="sendChatMessage()" disabled>Enviar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel" id="scorePanel" style="display: none;">
+                <div class="panel-header">📊 Tabela de Pontuação</div>
+                <div id="scoreTableContainer">
+                    <table class="score-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th style="text-align: left;">Jogador</th>
+                                <th>V</th>
+                                <th>E</th>
+                                <th>D</th>
+                                <th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scoreTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel" id="tournamentPanel" style="display: none;">
+                <div class="panel-header">🏆 Chaveamento do Torneio</div>
+                <div id="matchSelector" style="display:none; padding:8px;">
+                    <label for="matchSelect" style="font-size:12px;">Assistir partida:</label>
+                    <select id="matchSelect" onchange="selectTournamentMatch(this.value)" style="width:100%; margin-top:4px;"></select>
+                </div>
+                <div id="bracketDisplay">
+                    <div style="text-align: center; color: #8d99ae;">Aguardando início...</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header" id="userCountHeader">Pessoas na Sala (0/20)</div>
+                <div id="userList">
+                    <div style="text-align: center; color: #8d99ae;">Nenhuma sala ativa.</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="status">Iniciando...</div>
+
+    <div class="modal-backdrop" id="tournamentConfigModal" role="dialog" aria-modal="true" aria-labelledby="tournamentConfigTitle">
+        <form class="modal-card" onsubmit="confirmTournamentConfig(event)">
+            <h2 id="tournamentConfigTitle">🏆 Configurar torneio</h2>
+            <label class="modal-field" for="tournamentTimeSelect">
+                Tempo por jogador
+                <select id="tournamentTimeSelect">
+                    <option value="none">Sem limite de tempo</option>
+                    <option value="1">1 minuto</option>
+                    <option value="3">3 minutos</option>
+                    <option value="5" selected>5 minutos</option>
+                    <option value="10">10 minutos</option>
+                    <option value="15">15 minutos</option>
+                </select>
+            </label>
+            <label class="modal-field" for="tournamentModeSelect">
+                Formato das partidas
+                <select id="tournamentModeSelect">
+                    <option value="sequential">Uma partida por vez</option>
+                    <option value="simultaneous">Partidas simultâneas</option>
+                </select>
+            </label>
+            <div class="modal-actions">
+                <button type="button" class="btn-danger" onclick="closeTournamentConfig()">Cancelar</button>
+                <button type="submit" class="btn-tournament">Iniciar torneio</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="modal-backdrop" id="tournamentWinnerModal" role="dialog" aria-modal="true" aria-labelledby="tournamentWinnerTitle">
+        <div class="modal-card">
+            <div class="modal-winner-trophy">🏆</div>
+            <h2 id="tournamentWinnerTitle">Torneio finalizado!</h2>
+            <div class="modal-winner-name" id="tournamentWinnerName">Fulano</div>
+            <p class="modal-winner-text">é o campeão!</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-tournament" onclick="closeTournamentWinner()">Continuar</button>
+            </div>
+            </div>
+        </div>
+
+        <div class="modal-backdrop" id="queenSettingsModal" role="dialog" aria-modal="true" aria-labelledby="queenSettingsTitle">
+            <form class="modal-card" onsubmit="saveQueenSettings(event)">
+                <h2 id="queenSettingsTitle">♕ Escolha sua rainha</h2>
+                <label class="modal-field" for="queenThemeSelect">
+                    Estilo da peça
+                    <select id="queenThemeSelect" onchange="updateQueenPreview()"></select>
+                </label>
+                <div class="queen-preview" aria-label="Pré-visualização da rainha">
+                    <img id="queenPreviewWhite" alt="Rainha branca">
+                    <img id="queenPreviewBlack" alt="Rainha preta">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-danger" onclick="closeQueenSettings()">Cancelar</button>
+                    <button type="submit" class="btn-tournament">Salvar escolha</button>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bibliotecas CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <script>
+        // Web Audio API
+        let audioCtx = null;
+
+        function tocarSomMovimento() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.08);
+
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        function tocarSomXeque() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const now = audioCtx.currentTime;
+            [740, 988].forEach((frequency, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const start = now + index * 0.1;
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(frequency, start);
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(0.24, start + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.08);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(start);
+                osc.stop(start + 0.09);
+            });
+        }
+
+        function tocarSomFinalPartida(isCheckmate = false) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const notes = isCheckmate ? [220, 165, 110] : [330, 440, 660];
+            notes.forEach((frequency, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const start = audioCtx.currentTime + index * 0.14;
+                osc.type = isCheckmate ? 'sawtooth' : 'triangle';
+                osc.frequency.setValueAtTime(frequency, start);
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(0.35, start + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.13);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(start);
+                osc.stop(start + 0.14);
+            });
+        }
+
+        // Cada opção define as imagens da rainha branca e preta.
+        const queenThemes = {
+            pradrao: {
+                white: 'https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png',
+                black: 'https://chessboardjs.com/img/chesspieces/wikipedia/bQ.png'
+            },
+            frieren:{
+                white: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841603/grok-image-02591cca-1723-4c78-ad19-f69903c83cdc-removebg-preview.png',
+                black: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841604/grok-image-ab80f195-abb8-4cfe-b0bb-c6bf1d78ebf6-removebg-preview.png'
+            },
+            tati: {
+                white: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841567/tati_w.png',
+                black: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841567/tati_b.png'
+            },
+            tau: {
+                white: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841447/tau_w.png',
+                black: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841382/tau_b.png'
+            },
+            sandy:{
+                white: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841709/sandy_w.png',
+                black: 'https://res.cloudinary.com/ibk6zbsa/image/upload/v1789841709/sandy_b.png'
+            }
+
+        };
+
+        let board = null;
+        let game = new Chess();
+        let peer = null;
+        let isHost = false;
+        let hostConn = null;
+        let connectionRejected = false;
+        
+        let activeWhite = null;
+        let activeBlack = null;
+        let spectatorQueue = [];
+        let userNicks = {};
+        let sessionTokens = {};
+        let connections = {};
+
+        // Modo Offline / CPU
+        let isCpuMode = false;
+        let playerColor = 'w';
+
+        // Sistema de Pontuação e Torneio
+        let scores = {};
+        let tournamentActive = false;
+        let tournamentData = null;
+        let selectedMatchId = null;
+        let playerMatchId = null;
+
+        let myPeerId = 'HOST';
+        let myNick = 'Jogador';
+        let myRole = 'offline';
+        let mode = 'offline';
+        let matchWhiteNick = null;
+        let matchBlackNick = null;
+        let queenSettingsOpenedForRoom = false;
+        let selectedQueenTheme = queenThemes[localStorage.getItem('chessQueenTheme')]
+            ? localStorage.getItem('chessQueenTheme')
+            : 'default';
+        let playerQueenThemes = {};
+
+        const MAX_USERS = 20;
+
+        const cpuDialogues = {
+            start: [
+                "Que comece o jogo! Boa sorte humano.",
+                "Processando estratégias... Que vença o melhor!",
+                "Estou pronto! Mostre-me suas melhores jogadas."
+            ],
+            check: [
+                "Xeque! Cuidado com o seu Rei.",
+                "Seu Rei está sob ameaça!",
+                "Sinta a pressão! Xeque no tabuleiro."
+            ],
+            capture: [
+                "Obrigado por essa peça!",
+                "Uma troca interessante... para mim!",
+                "Menos uma peça no seu exército!"
+            ],
+            chatResponses: [
+                "Estou analisando milhares de posições por segundo, mas posso conversar também!",
+                "Interessante observação... agora veja este movimento!",
+                "Focar no jogo é crucial para não perder uma peça!",
+                "Zero e um... um e zero... Ops, desculpe, me distraí conversando!",
+                "Boa tentativa de me distrair com papo furado!"
+            ],
+            win: [
+                "Xeque-mate! As máquinas prevalecem desta vez.",
+                "Excelente partida! Quer tentar uma revanche?"
+            ],
+            loss: [
+                "Parabéns! Suas táticas foram superiores.",
+                "Erro nos meus circuitos! Você jogou muito bem."
+            ]
+        };
+
+        function cpuSpeak(category, delay = 600) {
+            if (!isCpuMode) return;
+            let list = cpuDialogues[category];
+            if (!list || list.length === 0) return;
+            let msg = list[Math.floor(Math.random() * list.length)];
+            setTimeout(() => {
+                addChatMessage('🤖 IA', msg);
+            }, delay);
+        }
+
+        const pieceValues = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 1000 };
+
+        const pst = {
+            p: [
+                [0,  0,  0,  0,  0,  0,  0,  0],
+                [50, 50, 50, 50, 50, 50, 50, 50],
+                [10, 10, 20, 30, 30, 20, 10, 10],
+                [ 5,  5, 10, 25, 25, 10,  5,  5],
+                [ 0,  0,  0, 20, 20,  0,  0,  0],
+                [ 5, -5,-10,  0,  0,-10, -5,  5],
+                [ 5, 10, 10,-20,-20, 10, 10,  5],
+                [ 0,  0,  0,  0,  0,  0,  0,  0]
+            ],
+            n: [
+                [-50,-40,-30,-30,-30,-30,-40,-50],
+                [-40,-20,  0,  0,  0,  0,-20,-40],
+                [-30,  0, 10, 15, 15, 10,  0,-30],
+                [-30,  5, 15, 20, 20, 15,  5,-30],
+                [-30,  0, 15, 20, 20, 15,  0,-30],
+                [-30,  5, 10, 15, 15, 10,  5,-30],
+                [-40,-20,  0,  5,  5,  0,-20,-40],
+                [-50,-40,-30,-30,-30,-30,-40,-50]
+            ]
+        };
+
+        function getNick() {
+            let input = document.getElementById('nickInput').value.trim();
+            return input ? input : 'Jogador';
+        }
+
+        const SESSION_STORAGE_KEY = 'xadrez-web-session';
+
+        function getSessionToken() {
+            let token = sessionStorage.getItem('xadrez-web-token');
+            if (!token) {
+                token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                sessionStorage.setItem('xadrez-web-token', token);
+            }
+            return token;
+        }
+
+        function saveSessionState(state) {
+            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function loadSessionState() {
+            let saved = localStorage.getItem(SESSION_STORAGE_KEY);
+            if (!saved) return null;
+
+            try {
+                return JSON.parse(saved);
+            } catch (error) {
+                console.warn('Estado salvo da sessão ignorado:', error);
+                localStorage.removeItem(SESSION_STORAGE_KEY);
+                return null;
+            }
+        }
+
+        function saveOfflineState() {
+            if (mode !== 'offline') return;
+            saveSessionState({
+                mode: 'offline',
+                submode: isCpuMode ? 'cpu' : 'local',
+                nick: getNick(),
+                color: document.getElementById('colorSelect').value,
+                fen: game.fen()
+            });
+        }
+
+        function saveOnlineSession(roomId, isRoomHost = false) {
+            saveSessionState({
+                mode: 'online',
+                roomId: roomId,
+                nick: getNick(),
+                sessionToken: getSessionToken(),
+                isHost: isRoomHost
+            });
+        }
+
+        function normalizeNick(nick) {
+            return nick.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+        }
+
+        function sanitizeRoomCode(code) {
+            return code.replace(/[^a-zA-Z0-9_-]/g, '');
+        }
+
+        function onDragStart (source, piece) {
+            if (game.game_over()) return false;
+
+            if (mode === 'offline') {
+                if (isCpuMode) {
+                    if (game.turn() !== playerColor) return false;
+                    if ((playerColor === 'w' && piece.search(/^b/) !== -1) ||
+                        (playerColor === 'b' && piece.search(/^w/) !== -1)) return false;
+                } else {
+                    if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                        (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
+                }
+            } else {
+                if (myRole !== 'w' && myRole !== 'b') return false;
+                if (tournamentActive && playerMatchId && selectedMatchId !== playerMatchId) return false;
+                if (game.turn() !== myRole) return false;
+                if ((myRole === 'w' && piece.search(/^b/) !== -1) ||
+                    (myRole === 'b' && piece.search(/^w/) !== -1)) return false;
+            }
+        }
+
+        function onDrop (source, target) {
+            if (mode === 'online' && isHost) {
+                let accepted = handleGameMove(myPeerId, {
+                    from: source,
+                    to: target,
+                    promotion: 'q',
+                    matchId: selectedMatchId
+                });
+
+                if (!accepted) return 'snapback';
+
+                tocarSomMovimento();
+                return;
+            }
+
+            if (mode === 'online' && (!hostConn || !hostConn.open)) {
+                return 'snapback';
+            }
+
+            let move = game.move({ from: source, to: target, promotion: 'q' });
+            if (move === null) return 'snapback';
+
+            saveOfflineState();
+            tocarSomMovimento();
+            if (game.in_check() && !game.in_checkmate()) tocarSomXeque();
+            updateStatus();
+
+            if (mode === 'online') {
+                let payload = { type: 'move', move: move, fen: game.fen(), matchId: selectedMatchId };
+                if (hostConn) hostConn.send(payload);
+            } else if (isCpuMode && !game.game_over()) {
+                window.setTimeout(makeCpuMove, 300);
+            }
+        }
+
+        function evaluateBoard(boardState) {
+            let totalEval = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    let piece = boardState[r][c];
+                    if (piece) {
+                        let val = pieceValues[piece.type] || 0;
+                        let posVal = 0;
+                        
+                        if (pst[piece.type]) {
+                            posVal = piece.color === 'w' ? pst[piece.type][r][c] : pst[piece.type][7 - r][c];
+                        }
+
+                        let score = val + posVal;
+                        totalEval += (piece.color === 'w') ? score : -score;
+                    }
+                }
+            }
+            return totalEval;
+        }
+
+        function minimax(depth, isMaximizing, alpha, beta) {
+            if (depth === 0 || game.game_over()) {
+                return evaluateBoard(game.board());
+            }
+
+            let moves = game.moves({ verbose: true });
+
+            if (isMaximizing) {
+                let maxEval = -Infinity;
+                for (let move of moves) {
+                    game.move(move);
+                    let evaluation = minimax(depth - 1, false, alpha, beta);
+                    game.undo();
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (let move of moves) {
+                    game.move(move);
+                    let evaluation = minimax(depth - 1, true, alpha, beta);
+                    game.undo();
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
+        function makeCpuMove() {
+            if (game.game_over()) return;
+
+            let moves = game.moves({ verbose: true });
+            if (moves.length === 0) return;
+
+            let bestMove = null;
+            let isMaximizing = (playerColor === 'b');
+            let bestValue = isMaximizing ? -Infinity : Infinity;
+            let depth = 3;
+
+            moves.sort((a, b) => (b.captured ? 1 : 0) - (a.captured ? 1 : 0));
+
+            for (let move of moves) {
+                game.move(move);
+                let boardVal = minimax(depth - 1, !isMaximizing, -Infinity, Infinity);
+                game.undo();
+
+                if (isMaximizing) {
+                    if (boardVal > bestValue) {
+                        bestValue = boardVal;
+                        bestMove = move;
+                    }
+                } else {
+                    if (boardVal < bestValue) {
+                        bestValue = boardVal;
+                        bestMove = move;
+                    }
+                }
+            }
+
+            if (bestMove) {
+                game.move(bestMove);
+                saveOfflineState();
+                board.position(game.fen());
+                updateStatus();
+                tocarSomMovimento();
+
+                if (game.in_checkmate()) {
+                    cpuSpeak('win');
+                } else if (game.in_check()) {
+                    tocarSomXeque();
+                    cpuSpeak('check');
+                } else if (bestMove.captured && Math.random() < 0.4) {
+                    cpuSpeak('capture');
+                }
+            }
+        }
+
+        function onSnapEnd () { board.position(game.fen()); }
+
+        function updateStatus () {
+            let status = '';
+            let moveColorName = (game.turn() === 'w') ? 'Brancas' : 'Pretas';
+
+            if (game.in_checkmate()) {
+                let winnerColor = game.turn() === 'w' ? 'Pretas' : 'Brancas';
+                status = `Xeque-mate! ${winnerColor} venceram!`;
+            } else if (game.in_draw()) {
+                status = 'Fim de jogo: Empate.';
+            } else {
+                if (mode === 'online') {
+                    if (myRole === 'spectator') {
+                        status = `Modo Espectador | Vez das ${moveColorName}`;
+                    } else {
+                        let isMyTurn = (game.turn() === myRole);
+                        status = isMyTurn ? `Sua vez!` : `Aguardando jogada do oponente...`;
+                    }
+                } else if (isCpuMode) {
+                    let isCpuTurn = game.turn() !== playerColor;
+                    status = isCpuTurn ? `🤖 Computador pensando...` : `Sua vez (${moveColorName})!`;
+                } else {
+                    status = 'Vez das ' + moveColorName;
+                }
+                if (game.in_check()) status += ' (Em Xeque!)';
+            }
+            document.getElementById('status').innerText = status;
+            updateMatchBanner();
+        }
+
+        function updateMatchBanner(whiteNick = null, blackNick = null) {
+            let playersEl = document.getElementById('matchBannerPlayers');
+            let turnEl = document.getElementById('matchBannerTurn');
+            if (!playersEl || !turnEl) return;
+
+            if (mode === 'offline') {
+                playersEl.innerHTML = isCpuMode
+                    ? '<span class="match-player"><span class="color-dot white" aria-label="Brancas"></span>VOCÊ</span> <span>vs</span> <span class="match-player"><span class="color-dot black" aria-label="Pretas"></span>Computador</span>'
+                    : '<span class="match-player"><span class="color-dot white" aria-label="Brancas"></span>Jogador 1</span> <span>vs</span> <span class="match-player"><span class="color-dot black" aria-label="Pretas"></span>Jogador 2</span>';
+                turnEl.innerText = `Vez das ${game.turn() === 'w' ? 'Brancas' : 'Pretas'}`;
+                return;
+            }
+
+            let white = whiteNick || (activeWhite ? userNicks[activeWhite] : null);
+            let black = blackNick || (activeBlack ? userNicks[activeBlack] : null);
+            if (whiteNick !== null) matchWhiteNick = whiteNick;
+            if (blackNick !== null) matchBlackNick = blackNick;
+            if (!white && matchWhiteNick) white = matchWhiteNick;
+            if (!black && matchBlackNick) black = matchBlackNick;
+            if (!white || !black) {
+                playersEl.innerText = 'Aguardando jogadores';
+                turnEl.innerText = 'A partida começará quando dois jogadores estiverem prontos';
+                return;
+            }
+
+            let whitePlayer = `<span class="match-player"><span class="color-dot white" aria-label="Brancas"></span>${myRole === 'w' ? '<strong>VOCÊ</strong>' : escapeHtml(white)}</span>`;
+            let blackPlayer = `<span class="match-player"><span class="color-dot black" aria-label="Pretas"></span>${myRole === 'b' ? '<strong>VOCÊ</strong>' : escapeHtml(black)}</span>`;
+            playersEl.innerHTML = `${whitePlayer} <span>vs</span> ${blackPlayer}`;
+
+            let turnName = game.turn() === 'w' ? white : black;
+            turnEl.innerText = myRole === 'w' || myRole === 'b'
+                ? (game.turn() === myRole ? 'Sua vez' : `Vez de ${turnName}`)
+                : `Espectador · vez de ${turnName}`;
+            updateClockDisplay();
+        }
+
+        function formatClock(seconds) {
+            let safeSeconds = Math.max(0, Math.ceil(seconds));
+            return `${String(Math.floor(safeSeconds / 60)).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
+        }
+
+        function getClockSeconds(color) {
+            if (!tournamentData?.clock) return null;
+            let clock = tournamentData.clock;
+            let elapsed = clock.running && clock.lastTick
+                ? (Date.now() - clock.lastTick) / 1000
+                : 0;
+            return Math.max(0, clock[color] - (clock.running && game.turn() === color ? elapsed : 0));
+        }
+
+        function updateClockDisplay() {
+            let clockEl = document.getElementById('matchClock');
+            if (!clockEl) return;
+            if (!tournamentData?.clock) {
+                clockEl.innerText = '∞ Sem limite';
+                clockEl.classList.remove('warning');
+                return;
+            }
+
+            let whiteSeconds = getClockSeconds('w');
+            let blackSeconds = getClockSeconds('b');
+            clockEl.innerText = `♔ ${formatClock(whiteSeconds)}  ·  ${formatClock(blackSeconds)} ♚`;
+            clockEl.classList.toggle('warning', Math.min(whiteSeconds, blackSeconds) <= 10);
+        }
+
+        function startClockTicker() {
+            if (window.clockTicker) clearInterval(window.clockTicker);
+            window.clockTicker = setInterval(() => {
+                updateClockDisplay();
+                if (isHost && tournamentActive && !tournamentData?.simultaneous && tournamentData?.clock?.running) {
+                    let color = game.turn();
+                    if (getClockSeconds(color) <= 0) {
+                        tournamentData.clock[color] = 0;
+                        tournamentData.clock.running = false;
+                        handleTimeout(color);
+                    }
+                }
+                if (isHost && tournamentActive && tournamentData?.simultaneous) {
+                    const round = tournamentData.rounds[tournamentData.currentRound] || [];
+                    round.forEach(match => {
+                        if (!match.clock?.running || match.winner || !match.fen) return;
+                        const matchGame = new Chess();
+                        if (!matchGame.load(match.fen)) return;
+                        const color = matchGame.turn();
+                        const elapsed = match.clock.lastTick ? (Date.now() - match.clock.lastTick) / 1000 : 0;
+                        match.clock[color] = Math.max(0, match.clock[color] - elapsed);
+                        match.clock.lastTick = Date.now();
+                        if (match.clock[color] <= 0) {
+                            match.clock.running = false;
+                            const winnerId = color === 'w' ? match.blackPlayer : match.whitePlayer;
+                            const loserId = color === 'w' ? match.whitePlayer : match.blackPlayer;
+                            match.winner = winnerId;
+                            match.result = winnerId === 'BYE' ? null : (winnerId === match.whitePlayer ? '1-0' : '0-1');
+                            registerScoreResult(winnerId, loserId, false);
+                            const timeoutText = `⏱️ TEMPO ESGOTADO! ${userNicks[winnerId] || 'Jogador'} venceu ${userNicks[loserId] || 'o adversário'}.`;
+                            addChatMessage('', timeoutText, 'system');
+                            broadcast({ type: 'sys_msg', text: timeoutText, finishSound: true, checkmate: false });
+                            advanceTournamentWinner(round.indexOf(match), winnerId);
+                            if (isFinalTournamentMatchResolved(match)) {
+                                announceTournamentWinner(winnerId);
+                            }
+                        }
+                    });
+                    if (tournamentActive) setupNextTournamentMatch();
+                    updateRoomState();
+                }
+            }, 250);
+        }
+
+        function getQueenThemeForPlayer(playerId) {
+            return queenThemes[playerQueenThemes[playerId]] || queenThemes.default;
+        }
+
+        function getDisplayedQueenTheme(color) {
+            if (mode !== 'online') return queenThemes[selectedQueenTheme] || queenThemes.default;
+            let displayedMatch = getTournamentMatch();
+            let playerId = color === 'w'
+                ? displayedMatch?.whitePlayer || activeWhite
+                : displayedMatch?.blackPlayer || activeBlack;
+            return getQueenThemeForPlayer(playerId);
+        }
+
+        function getQueenPieceUrl(piece) {
+            if (piece === 'wQ') return getDisplayedQueenTheme('w').white;
+            if (piece === 'bQ') return getDisplayedQueenTheme('b').black;
+            return `https://chessboardjs.com/img/chesspieces/wikipedia/${piece}.png`;
+        }
+
+        function populateQueenThemeOptions() {
+            const select = document.getElementById('queenThemeSelect');
+            if (!select) return;
+            select.innerHTML = Object.keys(queenThemes)
+                .map(theme => `<option value="${escapeHtml(theme)}">${escapeHtml(theme)}</option>`)
+                .join('');
+            select.value = queenThemes[selectedQueenTheme] ? selectedQueenTheme : 'default';
+            updateQueenPreview();
+        }
+
+        function updateQueenPreview() {
+            const theme = queenThemes[document.getElementById('queenThemeSelect')?.value] || queenThemes.default;
+            document.getElementById('queenPreviewWhite').src = theme.white;
+            document.getElementById('queenPreviewBlack').src = theme.black;
+        }
+
+        function openQueenSettings() {
+            populateQueenThemeOptions();
+            document.getElementById('queenSettingsModal').classList.add('open');
+        }
+
+        function closeQueenSettings() {
+            document.getElementById('queenSettingsModal').classList.remove('open');
+        }
+
+        function saveQueenSettings(event) {
+            event.preventDefault();
+            selectedQueenTheme = document.getElementById('queenThemeSelect').value;
+            localStorage.setItem('chessQueenTheme', selectedQueenTheme);
+            playerQueenThemes[myPeerId] = selectedQueenTheme;
+            closeQueenSettings();
+            if (mode === 'online' && isHost) updateRoomState();
+            else if (mode === 'online' && hostConn?.open) hostConn.send({ type: 'queen_theme', theme: selectedQueenTheme });
+            if (board) initBoard(myRole === 'b' ? 'black' : 'white');
+        }
+
+        function initBoard(orientation = 'white') {
+            let config = {
+                draggable: true,
+                position: game.fen(),
+                orientation: orientation,
+                pieceTheme: getQueenPieceUrl,
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: onSnapEnd
+            };
+            board = Chessboard('board', config);
+            updateStatus();
+            setTimeout(resizeBoard, 200);
+
+            // Bloquear a rolagem nativa da página ao tocar no tabuleiro
+            const boardEl = document.getElementById('board');
+            if (boardEl) {
+                boardEl.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+            }
+        }
+
+        function resizeBoard() {
+            if (board) {
+                board.resize();
+            }
+        }
+
+        $(window).on('resize orientationchange', function() {
+            setTimeout(resizeBoard, 100);
+        });
+
+        function setControlsState(inOnlineGame) {
+            document.body.classList.toggle('online-mode', inOnlineGame);
+            let enableChat = inOnlineGame || isCpuMode;
+            document.getElementById('chatInput').disabled = !enableChat;
+            document.getElementById('chatBtn').disabled = !enableChat;
+            document.getElementById('resignBtn').disabled = !inOnlineGame || (myRole !== 'w' && myRole !== 'b');
+            document.getElementById('startTournamentBtn').style.display = (isHost && inOnlineGame && !tournamentActive) ? 'block' : 'none';
+            document.getElementById('endTournamentBtn').style.display = (isHost && inOnlineGame && tournamentActive) ? 'block' : 'none';
+            document.getElementById('scorePanel').style.display = inOnlineGame ? 'flex' : 'none';
+            document.getElementById('tournamentPanel').style.display = tournamentActive ? 'flex' : 'none';
+        }
+
+        function addChatMessage(sender, text, type = '') {
+            let chatMessages = document.getElementById('chatMessages');
+            let msgEl = document.createElement('div');
+            msgEl.className = `chat-msg ${type}`;
+            msgEl.innerHTML = type === 'system' ? text : `<strong>${escapeHtml(sender)}:</strong> ${escapeHtml(text)}`;
+            chatMessages.appendChild(msgEl);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendChatMessage() {
+            let input = document.getElementById('chatInput');
+            let text = input.value.trim();
+            if (!text) return;
+
+            let myCurrentNick = getNick();
+
+            if (isCpuMode) {
+                addChatMessage(myCurrentNick, text, 'me');
+                input.value = '';
+                cpuSpeak('chatResponses', 1000);
+                return;
+            }
+
+            let payload = { type: 'chat', nick: myCurrentNick, text: text };
+            if (mode === 'online') {
+                if (isHost) { addChatMessage(myCurrentNick, text, 'me'); broadcast(payload); }
+                else if (hostConn) { addChatMessage(myCurrentNick, text, 'me'); hostConn.send(payload); }
+            }
+            input.value = '';
+        }
+
+        function resignGame() {
+            if (mode !== 'online' || (myRole !== 'w' && myRole !== 'b')) return;
+            if (confirm('Deseja desistir da partida?')) {
+                let loserRole = myRole;
+                if (isHost) handleResignation(loserRole);
+                else if (hostConn) hostConn.send({ type: 'resign', role: loserRole, matchId: selectedMatchId });
+            }
+        }
+
+        function escapeHtml(text) {
+            return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+        }
+
+        function renderUserList(users) {
+            let userListEl = document.getElementById('userList');
+            userListEl.innerHTML = '';
+            document.getElementById('userCountHeader').innerText = `Pessoas na Sala (${users.length}/${MAX_USERS})`;
+
+            users.forEach(u => {
+                let badgeClass = 'role-spec';
+                let roleText = u.role === 'w' ? 'Brancas' : (u.role === 'b' ? 'Pretas' : `Fila #${u.queuePos}`);
+                if (u.role === 'w') badgeClass = 'role-w';
+                else if (u.role === 'b') badgeClass = 'role-b';
+
+                let div = document.createElement('div');
+                div.className = 'user-badge';
+                let removeButton = isHost && u.id !== myPeerId
+                    ? `<button class="user-remove" onclick="removePlayer('${escapeHtml(u.id)}')">Remover</button>`
+                    : '';
+                div.innerHTML = `<span>${escapeHtml(u.nick)}</span><span><span class="user-role ${badgeClass}">${roleText}</span>${removeButton}</span>`;
+                userListEl.appendChild(div);
+            });
+        }
+
+        function renderScoreTable() {
+            let tbody = document.getElementById('scoreTableBody');
+            tbody.innerHTML = '';
+
+            let sorted = Object.keys(scores).map(id => ({
+                id: id,
+                nick: userNicks[id] || 'Jogador',
+                ...scores[id]
+            })).sort((a, b) => b.pts - a.pts || b.v - a.v);
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color: #8d99ae;">Nenhuma partida jogada.</td></tr>';
+                return;
+            }
+
+            sorted.forEach((item, idx) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td style="text-align: left; font-weight: bold;">${escapeHtml(item.nick)}</td>
+                    <td>${item.v}</td>
+                    <td>${item.e}</td>
+                    <td>${item.d}</td>
+                    <td class="pts">${item.pts.toFixed(1)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderBracketDisplay() {
+            let container = document.getElementById('bracketDisplay');
+            if (!tournamentActive || !tournamentData) {
+                container.innerHTML = '<div style="text-align: center; color: #8d99ae;">Nenhum torneio em andamento.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            let rIdx = tournamentData.currentRound;
+            let roundMatches = tournamentData.rounds[rIdx];
+
+            let roundNames = ['Final', 'Semifinal', 'Quartas de Final', 'Oitavas de Final'];
+            let roundName = roundNames[tournamentData.rounds.length - 1 - rIdx] || `Rodada ${rIdx + 1}`;
+
+            let titleDiv = document.createElement('div');
+            titleDiv.style.fontWeight = 'bold';
+            titleDiv.style.textAlign = 'center';
+            titleDiv.innerText = `Fase: ${roundName}`;
+            container.appendChild(titleDiv);
+
+            roundMatches.forEach((m, mIdx) => {
+                let p1Name = userNicks[m.p1] || (m.p1 === 'BYE' ? 'BYE (Avança)' : 'A definir');
+                let p2Name = userNicks[m.p2] || (m.p2 === 'BYE' ? 'BYE (Avança)' : 'A definir');
+                let isCurrent = (mIdx === tournamentData.currentMatch);
+
+                let div = document.createElement('div');
+                div.className = `bracket-match ${isCurrent ? 'active' : ''}`;
+                let statusTxt = m.winner ? `🏆 ${userNicks[m.winner] || m.winner}` : (isCurrent ? '⚡ Em Jogo' : 'Aguardando');
+                div.innerHTML = `<div><strong>${escapeHtml(p1Name)}</strong> vs <strong>${escapeHtml(p2Name)}</strong></div><small>${statusTxt}</small>`;
+                container.appendChild(div);
+            });
+        }
+
+        function broadcast(data, exceptId = null) {
+            Object.keys(connections).forEach(id => {
+                if (id !== exceptId && connections[id] && connections[id].open) {
+                    connections[id].send(data);
+                }
+            });
+        }
+
+        function initPlayerScore(id) {
+            if (!scores[id]) {
+                scores[id] = { v: 0, e: 0, d: 0, pts: 0 };
+            }
+        }
+
+        function getRoomUserList() {
+            let list = [];
+            if (activeWhite) list.push({ id: activeWhite, nick: userNicks[activeWhite], role: 'w', queuePos: 0 });
+            if (activeBlack) list.push({ id: activeBlack, nick: userNicks[activeBlack], role: 'b', queuePos: 0 });
+            spectatorQueue.forEach((id, idx) => {
+                list.push({ id: id, nick: userNicks[id], role: 'spectator', queuePos: idx + 1 });
+            });
+            return list;
+        }
+
+        function resetPeer() {
+            if (peer) { peer.destroy(); peer = null; }
+            connections = {};
+            userNicks = {};
+            playerQueenThemes = {};
+            sessionTokens = {};
+            spectatorQueue = [];
+            activeWhite = null;
+            activeBlack = null;
+            hostConn = null;
+            connectionRejected = false;
+            tournamentActive = false;
+            tournamentData = null;
+            scores = {};
+            queenSettingsOpenedForRoom = false;
+        }
+
+        function startOffline(submode = 'local', restoredFen = null) {
+            mode = 'offline';
+            myRole = 'offline';
+            isCpuMode = (submode === 'cpu');
+            matchWhiteNick = null;
+            matchBlackNick = null;
+
+            let selectedColor = document.getElementById('colorSelect').value;
+            if (selectedColor === 'random') {
+                playerColor = Math.random() < 0.5 ? 'w' : 'b';
+            } else {
+                playerColor = selectedColor;
+            }
+
+            resetPeer();
+            
+            document.getElementById('roomDisplay').style.display = 'none';
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('userList').innerHTML = `<div style="text-align: center; color: #8d99ae;">Modo Offline (${isCpuMode ? 'vs IA' : 'Local'}).</div>`;
+            document.getElementById('userCountHeader').innerText = 'Pessoas na Sala (0/20)';
+            
+            let colorName = playerColor === 'w' ? 'Brancas ♔' : 'Pretas ♚';
+            addChatMessage('', isCpuMode ? `🤖 Modo Contra IA ativado! Você joga de ${colorName}.` : 'Modo Offline (2 Jogadores Local)', 'system');
+            
+            setControlsState(false);
+            game.reset();
+            if (restoredFen && !game.load(restoredFen)) {
+                game.reset();
+            }
+            saveOfflineState();
+
+            let boardOrientation = (isCpuMode && playerColor === 'b') ? 'black' : 'white';
+            initBoard(boardOrientation);
+
+            if (isCpuMode) {
+                cpuSpeak('start', 800);
+                if (playerColor === 'b') {
+                    window.setTimeout(makeCpuMove, 1200);
+                }
+            }
+        }
+
+        function createOnlineRoom() {
+            mode = 'online';
+            isCpuMode = false;
+            isHost = true;
+            matchWhiteNick = null;
+            matchBlackNick = null;
+            myNick = getNick();
+            game.reset();
+            resetPeer();
+
+            let customCode = sanitizeRoomCode(document.getElementById('createRoomIdInput').value.trim());
+            document.getElementById('chatMessages').innerHTML = '';
+            setControlsState(true);
+            document.getElementById('roomDisplay').innerHTML = '⏳ <strong>PREPARANDO SALA</strong> | Conectando à arena...';
+
+            peer = customCode ? new Peer(customCode) : new Peer();
+
+            peer.on('open', (id) => {
+                myPeerId = id;
+                saveOnlineSession(id, true);
+                activeWhite = myPeerId;
+                userNicks[myPeerId] = myNick;
+                playerQueenThemes[myPeerId] = selectedQueenTheme;
+                initPlayerScore(myPeerId);
+                myRole = 'w';
+
+                let display = document.getElementById('roomDisplay');
+                display.style.display = 'block';
+                display.innerHTML = `⏳ <strong>SALA (${escapeHtml(myNick)})</strong> | Código: <mark>${id}</mark>`;
+                
+                updateRoomState();
+                initBoard('white');
+                addChatMessage('', `Sala criada por ${myNick}. Aguardando jogadores...`, 'system');
+                if (!queenSettingsOpenedForRoom) {
+                    queenSettingsOpenedForRoom = true;
+                    openQueenSettings();
+                }
+            });
+
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') { alert('Código de sala já em uso!'); startOffline('local'); }
+                else alert('Erro: ' + err.message);
+            });
+
+            peer.on('connection', (c) => {
+                if (Object.keys(connections).length >= MAX_USERS - 1) {
+                    c.on('open', () => { c.send({ type: 'error', text: 'Sala cheia!' }); setTimeout(() => c.close(), 500); });
+                    return;
+                }
+                c.on('data', (data) => handleHostReceivedData(c, data));
+                c.on('close', () => {
+                    if (!c.replaced) handleUserDisconnect(c.peer);
+                });
+            });
+        }
+
+        function startTournament() {
+            if (!isHost) return;
+
+            let players = [myPeerId, ...Object.keys(connections)];
+            if (players.length < 2) {
+                alert('É necessário ter no mínimo 2 jogadores na sala para iniciar o torneio!');
+                return;
+            }
+
+            document.getElementById('tournamentConfigModal').classList.add('open');
+        }
+
+        function closeTournamentConfig() {
+            document.getElementById('tournamentConfigModal').classList.remove('open');
+        }
+
+        function confirmTournamentConfig(event) {
+            event.preventDefault();
+            let players = [myPeerId, ...Object.keys(connections)];
+            const timeValue = document.getElementById('tournamentTimeSelect').value;
+            let timeMinutes = timeValue === 'none' ? null : Number(timeValue);
+            let simultaneous = document.getElementById('tournamentModeSelect').value === 'simultaneous';
+            closeTournamentConfig();
+
+            scores = {};
+            players.forEach(initPlayerScore);
+            renderScoreTable();
+
+            players.sort(() => Math.random() - 0.5);
+
+            let pow = 2;
+            while (pow < players.length) pow *= 2;
+
+            let roundsCount = Math.log2(pow);
+            let rounds = [];
+
+            let r1 = [];
+            for (let i = 0; i < pow; i += 2) {
+                let p1 = players[i] || 'BYE';
+                let p2 = players[i+1] || 'BYE';
+                r1.push({ p1: p1, p2: p2, whitePlayer: null, blackPlayer: null, winner: null, result: null, matchId: `r0m${i / 2}`, fen: new Chess().fen(), moves: [], clock: null });
+            }
+            rounds.push(r1);
+
+            for (let r = 1; r < roundsCount; r++) {
+                let matchCount = pow / Math.pow(2, r + 1);
+                let roundMatches = [];
+                for (let m = 0; m < matchCount; m++) {
+                    roundMatches.push({ p1: null, p2: null, whitePlayer: null, blackPlayer: null, winner: null, result: null, matchId: `r${r}m${m}`, fen: new Chess().fen(), moves: [], clock: null });
+                }
+                rounds.push(roundMatches);
+            }
+
+            tournamentActive = true;
+            tournamentData = {
+                rounds: rounds,
+                currentRound: 0,
+                currentMatch: 0,
+                timeMinutes: timeMinutes,
+                simultaneous: simultaneous,
+                clock: timeMinutes === null ? null : {
+                    w: timeMinutes * 60,
+                    b: timeMinutes * 60,
+                    running: false,
+                    lastTick: null
+                }
+            };
+
+            processByes();
+            setupNextTournamentMatch();
+            addChatMessage('', '🏆 TORNEIO INICIADO! Boa sorte a todos!', 'system');
+        }
+
+        function processByes() {
+            let round = tournamentData.rounds[tournamentData.currentRound];
+            for (let mIdx = 0; mIdx < round.length; mIdx++) {
+                let m = round[mIdx];
+                if (m.p1 === 'BYE' && m.p2 !== 'BYE') {
+                    advanceTournamentWinner(mIdx, m.p2);
+                } else if (m.p2 === 'BYE' && m.p1 !== 'BYE') {
+                    advanceTournamentWinner(mIdx, m.p1);
+                } else if (m.p1 === 'BYE' && m.p2 === 'BYE') {
+                    // Marque BYE vs BYE como resolvida, senão uma rodada
+                    // simultânea nunca satisfaz o teste de conclusão.
+                    advanceTournamentWinner(mIdx, 'BYE');
+                }
+            }
+        }
+
+        function setupNextTournamentMatch() {
+            let rIdx = tournamentData.currentRound;
+            let round = tournamentData.rounds[rIdx];
+
+            if (tournamentData.simultaneous) {
+                let playable = round.filter(m => m.p1 && m.p2 && m.p1 !== 'BYE' && m.p2 !== 'BYE' && !m.winner);
+                playable.forEach(m => {
+                    assignMatchColors(m);
+                    if (!m.clock && tournamentData.timeMinutes !== null) {
+                        m.clock = { w: tournamentData.timeMinutes * 60, b: tournamentData.timeMinutes * 60, running: false, lastTick: null };
+                    }
+                });
+                if (playable.length) {
+                    const ownMatch = playable.find(m => m.whitePlayer === myPeerId || m.blackPlayer === myPeerId);
+                    if (ownMatch) selectedMatchId = ownMatch.matchId;
+                    else if (!selectedMatchId || !playable.some(m => m.matchId === selectedMatchId)) selectedMatchId = playable[0].matchId;
+                    syncSelectedTournamentMatch();
+                } else if (round.every(m => m.winner !== null && m.winner !== undefined)) {
+                    if (rIdx + 1 < tournamentData.rounds.length) {
+                        tournamentData.currentRound++;
+                        tournamentData.currentMatch = 0;
+                        processByes();
+                        setupNextTournamentMatch();
+                    } else {
+                        let championId = round[0].winner;
+                        announceTournamentWinner(championId);
+                    }
+                }
+                updateRoomState();
+                startClockTicker();
+                return;
+            }
+
+            while (tournamentData.currentMatch < round.length && round[tournamentData.currentMatch].winner) {
+                tournamentData.currentMatch++;
+            }
+
+            if (tournamentData.currentMatch >= round.length) {
+                if (rIdx + 1 < tournamentData.rounds.length) {
+                    tournamentData.currentRound++;
+                    tournamentData.currentMatch = 0;
+                    processByes();
+                    setupNextTournamentMatch();
+                    return;
+                } else {
+                    let championId = tournamentData.rounds[rIdx][0].winner;
+                    let championNick = userNicks[championId] || 'Campeão';
+                    announceTournamentWinner(championId);
+                    return;
+                }
+            }
+
+            let match = round[tournamentData.currentMatch];
+            match.matchId = match.matchId || `r${rIdx}m${tournamentData.currentMatch}`;
+            assignMatchColors(match);
+            activeWhite = match.whitePlayer;
+            activeBlack = match.blackPlayer;
+            selectedMatchId = match.matchId;
+
+            game.reset();
+            if (tournamentData.clock) {
+                tournamentData.clock.w = tournamentData.timeMinutes * 60;
+                tournamentData.clock.b = tournamentData.timeMinutes * 60;
+                tournamentData.clock.running = false;
+                tournamentData.clock.lastTick = null;
+            }
+            match.fen = game.fen();
+            match.clock = tournamentData.clock;
+            updateRoomState();
+            startClockTicker();
+
+            let p1Nick = userNicks[activeWhite];
+            let p2Nick = userNicks[activeBlack];
+            const timeLabel = tournamentData.timeMinutes === null
+                ? 'sem limite de tempo'
+                : `${tournamentData.timeMinutes} min por jogador`;
+            addChatMessage('', `⚔️ Partida do Torneio: ${p1Nick} (Brancas) vs ${p2Nick} (Pretas) · ${timeLabel}`, 'system');
+        }
+
+        function assignMatchColors(match) {
+            if (!match || !match.p1 || !match.p2 || match.p1 === 'BYE' || match.p2 === 'BYE') return;
+            if (match.whitePlayer && match.blackPlayer) return;
+            if (Math.random() < 0.5) {
+                match.whitePlayer = match.p1;
+                match.blackPlayer = match.p2;
+            } else {
+                match.whitePlayer = match.p2;
+                match.blackPlayer = match.p1;
+            }
+        }
+
+        function announceTournamentWinner(championId) {
+            if (!tournamentActive) return;
+            let championNick = userNicks[championId] || 'Campeão';
+            let text = `🎉🏆 TORNEIO FINALIZADO! 🏆🎉 O grande campeão é ${championNick}!`;
+            tournamentActive = false;
+            if (tournamentData?.clock) tournamentData.clock.running = false;
+            tocarSomFinalPartida(false);
+            showTournamentWinner(championNick);
+            addChatMessage('', text, 'system');
+            broadcast({ type: 'sys_msg', text: text, finishSound: true, checkmate: false, tournamentWinner: championNick });
+            updateRoomState();
+        }
+
+        function isFinalTournamentMatchResolved(match) {
+            return Boolean(
+                tournamentActive &&
+                tournamentData &&
+                tournamentData.currentRound === tournamentData.rounds.length - 1 &&
+                tournamentData.rounds[tournamentData.currentRound].length === 1 &&
+                match &&
+                match.winner
+            );
+        }
+
+        function showTournamentWinner(championNick) {
+            document.getElementById('tournamentWinnerName').innerText = championNick;
+            document.getElementById('tournamentWinnerModal').classList.add('open');
+        }
+
+        function closeTournamentWinner() {
+            document.getElementById('tournamentWinnerModal').classList.remove('open');
+        }
+
+        function endTournament() {
+            if (!isHost || !tournamentActive) return;
+            if (!confirm('Deseja realmente encerrar o torneio agora? O progresso será cancelado.')) return;
+            tournamentActive = false;
+            if (tournamentData?.clock) tournamentData.clock.running = false;
+            let text = '⏹ O torneio foi encerrado pelo dono da sala.';
+            addChatMessage('', text, 'system');
+            broadcast({ type: 'sys_msg', text: text });
+            updateRoomState();
+        }
+
+        function removePlayer(peerId) {
+            if (!isHost || !peerId || peerId === myPeerId) return;
+            let nick = userNicks[peerId] || 'Jogador';
+            if (!confirm(`Remover ${nick} da sala?`)) return;
+            let connection = connections[peerId];
+            if (!connection) return;
+            connection.replaced = true;
+            connection.send({ type: 'error', text: 'Você foi removido da sala pelo dono.' });
+            setTimeout(() => connection.close(), 300);
+            handleUserDisconnect(peerId);
+        }
+
+        function advanceTournamentWinner(matchIdx, winnerId) {
+            let rIdx = tournamentData.currentRound;
+            let match = tournamentData.rounds[rIdx][matchIdx];
+            if (match._advanced) return;
+            if (match.winner && match.winner !== winnerId) return;
+            match.winner = winnerId;
+            match.result = winnerId === 'BYE' ? null : (winnerId === match.whitePlayer ? '1-0' : '0-1');
+            if (match.clock) match.clock.running = false;
+            match._advanced = true;
+
+            if (rIdx + 1 < tournamentData.rounds.length) {
+                let nextMatchIdx = Math.floor(matchIdx / 2);
+                let isP1 = (matchIdx % 2 === 0);
+                let nextMatch = tournamentData.rounds[rIdx + 1][nextMatchIdx];
+                if (isP1) nextMatch.p1 = winnerId;
+                else nextMatch.p2 = winnerId;
+                nextMatch.whitePlayer = null;
+                nextMatch.blackPlayer = null;
+            }
+        }
+
+        function getTournamentMatch(matchId = selectedMatchId) {
+            if (!tournamentData) return null;
+            for (const round of tournamentData.rounds || []) {
+                const found = round.find(m => m.matchId === matchId);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function syncSelectedTournamentMatch() {
+            const match = getTournamentMatch();
+            if (!match) return;
+            assignMatchColors(match);
+            activeWhite = match.whitePlayer;
+            activeBlack = match.blackPlayer;
+            if (match.fen) game.load(match.fen);
+            if (match.clock) tournamentData.clock = match.clock;
+            playerMatchId = null;
+            if (match.whitePlayer === myPeerId || match.blackPlayer === myPeerId) playerMatchId = match.matchId;
+            updateMatchSelector();
+        }
+
+        function updateMatchSelector() {
+            const selector = document.getElementById('matchSelector');
+            const select = document.getElementById('matchSelect');
+            if (!selector || !select || !tournamentData?.simultaneous) return;
+            const matches = tournamentData.rounds?.[tournamentData.currentRound] || [];
+            const playable = matches.filter(m => m.p1 && m.p2 && m.p1 !== 'BYE' && m.p2 !== 'BYE');
+            selector.style.display = playable.length > 1 ? 'block' : 'none';
+            select.innerHTML = playable.map(m => `<option value="${m.matchId}" ${m.matchId === selectedMatchId ? 'selected' : ''}>${escapeHtml(userNicks[m.p1] || m.p1)} vs ${escapeHtml(userNicks[m.p2] || m.p2)}${m.winner ? ' · finalizada' : ''}</option>`).join('');
+        }
+
+        function selectTournamentMatch(matchId) {
+            if (!tournamentData?.simultaneous || !matchId) return;
+            if (playerMatchId && playerMatchId !== matchId) return;
+            selectedMatchId = matchId;
+            if (isHost) {
+                syncSelectedTournamentMatch();
+                updateRoomState();
+            } else if (hostConn) {
+                hostConn.send({ type: 'select_match', matchId: matchId });
+            }
+        }
+
+        function handleHostReceivedData(c, data) {
+            if (data.type === 'join') {
+                let requestedNick = typeof data.nick === 'string'
+                    ? data.nick.trim().replace(/\s+/g, ' ')
+                    : '';
+                requestedNick = requestedNick || 'Jogador';
+                let requestedNickKey = normalizeNick(requestedNick);
+                let reconnectingPeerId = Object.keys(sessionTokens).find(id =>
+                    data.sessionToken && sessionTokens[id] === data.sessionToken
+                );
+                let nickAlreadyInUse = Object.entries(userNicks).some(([id, nick]) =>
+                    id !== reconnectingPeerId && normalizeNick(nick) === requestedNickKey
+                );
+
+                if (nickAlreadyInUse) {
+                    c.send({ type: 'error', text: 'Esse nickname já está em uso na sala. Escolha outro nome e tente novamente.' });
+                    setTimeout(() => c.close(), 500);
+                    return;
+                }
+
+                c.sessionToken = data.sessionToken || '';
+                if (reconnectingPeerId) {
+                    let oldConnection = connections[reconnectingPeerId];
+                    replaceReconnectedPlayer(reconnectingPeerId, c.peer, c, requestedNick);
+                    if (oldConnection && oldConnection !== c && oldConnection.open) {
+                        oldConnection.replaced = true;
+                        oldConnection.close();
+                    }
+                } else {
+                    connections[c.peer] = c;
+                    userNicks[c.peer] = requestedNick;
+                    playerQueenThemes[c.peer] = queenThemes[data.queenTheme] ? data.queenTheme : 'default';
+                    sessionTokens[c.peer] = c.sessionToken;
+                    initPlayerScore(c.peer);
+                }
+                if (reconnectingPeerId) {
+                    playerQueenThemes[c.peer] = queenThemes[data.queenTheme] ? data.queenTheme : 'default';
+                }
+
+                if (!reconnectingPeerId && !tournamentActive) {
+                    if (!activeWhite) activeWhite = c.peer;
+                    else if (!activeBlack) activeBlack = c.peer;
+                    else spectatorQueue.push(c.peer);
+                } else if (!reconnectingPeerId) {
+                    spectatorQueue.push(c.peer);
+                }
+
+                updateRoomState();
+                let statusText = reconnectingPeerId
+                    ? `${requestedNick} reconectou à sala.`
+                    : `${requestedNick} entrou na sala.`;
+                addChatMessage('', statusText, 'system');
+                broadcast({ type: 'sys_msg', text: statusText }, c.peer);
+
+            } else if (data.type === 'queen_theme') {
+                if (queenThemes[data.theme]) {
+                    playerQueenThemes[c.peer] = data.theme;
+                    updateRoomState();
+                }
+            } else if (data.type === 'chat') {
+                addChatMessage(data.nick, data.text);
+                broadcast(data, c.peer);
+
+            } else if (data.type === 'move') {
+                // O matchId fica no envelope da mensagem (não no objeto SAN/UCI).
+                // Repassá-lo é essencial para que o host valide a partida simultânea.
+                if (data.move && typeof data.move === 'object') {
+                    handleGameMove(c.peer, { ...data.move, matchId: data.matchId });
+                }
+            } else if (data.type === 'select_match') {
+                if (tournamentData?.simultaneous) {
+                    const round = tournamentData.rounds[tournamentData.currentRound] || [];
+                    const match = round.find(m =>
+                        m.matchId === data.matchId &&
+                        m.p1 && m.p2 && m.p1 !== 'BYE' && m.p2 !== 'BYE'
+                    );
+                    if (match) {
+                        c.selectedMatchId = match.matchId;
+                        updateRoomState();
+                    }
+                }
+            } else if (data.type === 'resign') {
+                if (tournamentData?.simultaneous) {
+                    const round = tournamentData.rounds[tournamentData.currentRound] || [];
+                    const match = round.find(m => m.matchId === data.matchId);
+                    if (match && !match.winner &&
+                        (c.peer === match.whitePlayer || c.peer === match.blackPlayer)) {
+                        assignMatchColors(match);
+                        const winnerId = c.peer === match.whitePlayer ? match.blackPlayer : match.whitePlayer;
+                        match.winner = winnerId;
+                        match.result = winnerId === match.whitePlayer ? '1-0' : '0-1';
+                        if (match.clock) match.clock.running = false;
+                        registerScoreResult(winnerId, c.peer, false);
+                        advanceTournamentWinner(round.indexOf(match), winnerId);
+                        if (isFinalTournamentMatchResolved(match)) announceTournamentWinner(winnerId);
+                        else setupNextTournamentMatch();
+                        updateRoomState();
+                    }
+                } else handleResignation(data.role);
+            }
+        }
+
+        function registerScoreResult(winnerId, loserId, isDraw = false) {
+            if (isDraw) {
+                if (winnerId) { initPlayerScore(winnerId); scores[winnerId].e++; scores[winnerId].pts += 0.5; }
+                if (loserId) { initPlayerScore(loserId); scores[loserId].e++; scores[loserId].pts += 0.5; }
+            } else {
+                if (winnerId) { initPlayerScore(winnerId); scores[winnerId].v++; scores[winnerId].pts += 1.0; }
+                if (loserId) { initPlayerScore(loserId); scores[loserId].d++; }
+            }
+        }
+
+        function handleGameMove(peerId, move) {
+            const currentRound = tournamentData?.rounds?.[tournamentData.currentRound] || [];
+            let match = tournamentData?.simultaneous
+                ? currentRound.find(m => m.matchId === move?.matchId) || null
+                : null;
+            if (tournamentData?.simultaneous) {
+                if (!match || match.winner || (peerId !== match.whitePlayer && peerId !== match.blackPlayer)) return false;
+                assignMatchColors(match);
+                let matchGame = new Chess();
+                if (match.fen) matchGame.load(match.fen);
+                let expectedPlayerId = matchGame.turn() === 'w' ? match.whitePlayer : match.blackPlayer;
+                if (peerId !== expectedPlayerId) return false;
+                if (!match.clock && tournamentData.timeMinutes !== null) {
+                    match.clock = {
+                        w: tournamentData.timeMinutes * 60,
+                        b: tournamentData.timeMinutes * 60,
+                        running: false,
+                        lastTick: null
+                    };
+                }
+                if (match.clock && !match.clock.running && matchGame.turn() === 'w') {
+                    match.clock.running = true;
+                    match.clock.lastTick = Date.now();
+                }
+                if (match.clock?.running) {
+                    let color = matchGame.turn();
+                    let elapsed = match.clock.lastTick ? (Date.now() - match.clock.lastTick) / 1000 : 0;
+                    match.clock[color] = Math.max(0, match.clock[color] - elapsed);
+                    match.clock.lastTick = Date.now();
+                    if (match.clock[color] <= 0) {
+                        const winnerId = color === 'w' ? match.blackPlayer : match.whitePlayer;
+                        const loserId = color === 'w' ? match.whitePlayer : match.blackPlayer;
+                        match.clock.running = false;
+                        match.winner = winnerId;
+                        match.result = winnerId === match.whitePlayer ? '1-0' : '0-1';
+                        registerScoreResult(winnerId, loserId, false);
+                        broadcast({
+                            type: 'sys_msg',
+                            text: `⏱️ TEMPO ESGOTADO! ${userNicks[winnerId] || 'Jogador'} venceu ${userNicks[loserId] || 'o adversário'}.`,
+                            finishSound: true,
+                            checkmate: false
+                        });
+                        advanceTournamentWinner(currentRound.indexOf(match), winnerId);
+                        if (isFinalTournamentMatchResolved(match)) announceTournamentWinner(winnerId);
+                        else setupNextTournamentMatch();
+                        updateRoomState();
+                        return false;
+                    }
+                }
+                let res = matchGame.move(move);
+                if (!res) return false;
+                match.fen = matchGame.fen();
+                match.moves = (match.moves || []).concat([res]);
+                const matchIsCheck = matchGame.in_check() && !matchGame.in_checkmate();
+                if (matchGame.in_checkmate() || matchGame.in_draw()) {
+                    let winnerId = matchGame.in_checkmate()
+                        ? (matchGame.turn() === 'w' ? match.blackPlayer : match.whitePlayer)
+                        : match.whitePlayer;
+                    match.result = matchGame.in_checkmate() ? (winnerId === match.whitePlayer ? '1-0' : '0-1') : '1/2-1/2';
+                    match.winner = winnerId;
+                    if (match.clock) match.clock.running = false;
+                    registerScoreResult(
+                        matchGame.in_checkmate() ? winnerId : match.whitePlayer,
+                        matchGame.in_checkmate() ? (winnerId === match.whitePlayer ? match.blackPlayer : match.whitePlayer) : match.blackPlayer,
+                        !matchGame.in_checkmate()
+                    );
+                    addChatMessage('', matchGame.in_checkmate() ? `🏆 ${userNicks[winnerId]} venceu a partida.` : '🤝 Empate!', 'system');
+                    broadcast({
+                        type: 'sys_msg',
+                        text: matchGame.in_checkmate()
+                            ? `🏆 XEQUE-MATE! ${userNicks[winnerId] || 'Jogador'} venceu a partida.`
+                            : `Partida ${userNicks[match.p1]} vs ${userNicks[match.p2]} encerrada.`,
+                        finishSound: true,
+                        checkmate: matchGame.in_checkmate()
+                    });
+                    if (tournamentData.rounds[tournamentData.currentRound].every(m => m.winner || m.p1 === 'BYE' || m.p2 === 'BYE')) {
+                        tournamentData.rounds[tournamentData.currentRound].forEach((m, i) => { if (!m.winner && m.p1 !== 'BYE' && m.p2 !== 'BYE') advanceTournamentWinner(i, m.p1); });
+                        setupNextTournamentMatch();
+                    } else {
+                        advanceTournamentWinner(tournamentData.rounds[tournamentData.currentRound].indexOf(match), winnerId);
+                    }
+                    if (isFinalTournamentMatchResolved(match)) {
+                        announceTournamentWinner(winnerId);
+                    }
+                }
+                broadcast({ type: 'move', move: res, fen: match.fen, matchId: match.matchId, clock: match.clock, check: matchIsCheck, matchState: match });
+                if (matchIsCheck) tocarSomXeque();
+                updateRoomState();
+                return true;
+            }
+            let expectedPlayerId = game.turn() === 'w' ? activeWhite : activeBlack;
+            if (peerId !== expectedPlayerId) return false;
+
+            if (tournamentData?.clock?.running) {
+                let color = game.turn();
+                tournamentData.clock[color] = getClockSeconds(color);
+                tournamentData.clock.lastTick = Date.now();
+            }
+            if (tournamentData?.clock && !tournamentData.clock.running && game.turn() === 'w') {
+                tournamentData.clock.running = true;
+                tournamentData.clock.lastTick = Date.now();
+            }
+
+            let res = game.move(move);
+            if (!res) return false;
+
+            board.position(game.fen());
+            updateStatus();
+            
+            if (peerId !== myPeerId) {
+                tocarSomMovimento();
+            }
+
+            broadcast({
+                type: 'move',
+                move: move,
+                fen: game.fen(),
+                clock: tournamentData?.clock || null,
+                matchId: selectedMatchId,
+                check: game.in_check() && !game.in_checkmate()
+            }, peerId);
+
+            if (game.in_check() && !game.in_checkmate()) tocarSomXeque();
+
+            if (game.in_checkmate()) {
+                let winnerRole = game.turn() === 'w' ? 'b' : 'w';
+                let winnerId = winnerRole === 'w' ? activeWhite : activeBlack;
+                let loserId = winnerRole === 'w' ? activeBlack : activeWhite;
+                let winnerNick = userNicks[winnerId];
+
+                registerScoreResult(winnerId, loserId, false);
+                finishSoundAndMessage(`🏆 XEQUE-MATE! ${winnerNick} venceu a partida!`, true);
+
+                setTimeout(() => finishMatch(winnerId), 2500);
+
+            } else if (game.in_draw()) {
+                registerScoreResult(activeWhite, activeBlack, true);
+                finishSoundAndMessage('🤝 EMPATE! A partida foi encerrada.', false);
+                
+                setTimeout(() => {
+                    if (tournamentActive) finishMatch(activeWhite);
+                    else { game.reset(); updateRoomState(); }
+                }, 2500);
+            }
+
+            return true;
+        }
+
+        function finishSoundAndMessage(text, isCheckmate) {
+            if (tournamentData?.clock) tournamentData.clock.running = false;
+            tocarSomFinalPartida(isCheckmate);
+            addChatMessage('', text, 'system');
+            broadcast({ type: 'sys_msg', text: text, finishSound: true, checkmate: isCheckmate });
+        }
+
+        function handleResignation(loserRole) {
+            let winnerRole = loserRole === 'w' ? 'b' : 'w';
+            let loserNick = userNicks[loserRole === 'w' ? activeWhite : activeBlack];
+            let winnerId = winnerRole === 'w' ? activeWhite : activeBlack;
+            let loserId = loserRole === 'w' ? activeBlack : activeWhite;
+
+            registerScoreResult(winnerId, loserId, false);
+            finishSoundAndMessage(`🏁 ${loserNick} desistiu. ${userNicks[winnerId]} venceu!`, false);
+
+            finishMatch(winnerId);
+        }
+
+        function handleTimeout(loserColor) {
+            let winnerId = loserColor === 'w' ? activeBlack : activeWhite;
+            let loserId = loserColor === 'w' ? activeWhite : activeBlack;
+            registerScoreResult(winnerId, loserId, false);
+            finishSoundAndMessage(`⏱️ TEMPO ESGOTADO! ${userNicks[winnerId]} venceu a partida.`, false);
+            finishMatch(winnerId);
+        }
+
+        function finishMatch(winnerId) {
+            if (tournamentActive) {
+                advanceTournamentWinner(tournamentData.currentMatch, winnerId);
+                setupNextTournamentMatch();
+            } else {
+                let loserId = (winnerId === activeWhite) ? activeBlack : activeWhite;
+                if (loserId) spectatorQueue.push(loserId);
+
+                activeWhite = winnerId;
+                activeBlack = spectatorQueue.length > 0 ? spectatorQueue.shift() : null;
+                game.reset();
+                updateRoomState();
+            }
+        }
+
+        function handleUserDisconnect(peerId) {
+            delete connections[peerId];
+            let disconnectedNick = userNicks[peerId] || 'Um participante';
+            delete userNicks[peerId];
+
+            spectatorQueue = spectatorQueue.filter(id => id !== peerId);
+
+            if (tournamentActive) {
+                if (tournamentData?.simultaneous) {
+                    let match = (tournamentData.rounds[tournamentData.currentRound] || [])
+                        .find(item => !item.winner && (item.p1 === peerId || item.p2 === peerId));
+                    if (match) {
+                        assignMatchColors(match);
+                        let winnerId = match.whitePlayer === peerId ? match.blackPlayer : match.whitePlayer;
+                        if (winnerId && winnerId !== 'BYE') {
+                            registerScoreResult(winnerId, peerId, false);
+                            match.winner = winnerId;
+                            match.result = winnerId === match.p1 ? '1-0' : '0-1';
+                            if (match.clock) match.clock.running = false;
+                            advanceTournamentWinner(tournamentData.rounds[tournamentData.currentRound].indexOf(match), winnerId);
+                        }
+                    }
+                    setupNextTournamentMatch();
+                } else if (activeWhite === peerId && activeBlack) finishMatch(activeBlack);
+                else if (activeBlack === peerId && activeWhite) finishMatch(activeWhite);
+            } else {
+                if (activeWhite === peerId) {
+                    activeWhite = spectatorQueue.length > 0 ? spectatorQueue.shift() : null;
+                    game.reset();
+                } else if (activeBlack === peerId) {
+                    activeBlack = spectatorQueue.length > 0 ? spectatorQueue.shift() : null;
+                    game.reset();
+                }
+            }
+
+            updateRoomState();
+            addChatMessage('', `${disconnectedNick} saiu da sala.`, 'system');
+            broadcast({ type: 'sys_msg', text: `${disconnectedNick} saiu da sala.` });
+        }
+
+        function replaceReconnectedPlayer(oldPeerId, newPeerId, conn, nick) {
+            delete connections[oldPeerId];
+            delete userNicks[oldPeerId];
+            delete sessionTokens[oldPeerId];
+            connections[newPeerId] = conn;
+            userNicks[newPeerId] = nick;
+            playerQueenThemes[newPeerId] = playerQueenThemes[oldPeerId] || 'tati';
+            delete playerQueenThemes[oldPeerId];
+            sessionTokens[newPeerId] = conn.sessionToken;
+
+            if (activeWhite === oldPeerId) activeWhite = newPeerId;
+            if (activeBlack === oldPeerId) activeBlack = newPeerId;
+            spectatorQueue = spectatorQueue.map(id => id === oldPeerId ? newPeerId : id);
+
+            Object.values(tournamentData?.rounds || []).forEach(round => {
+                round.forEach(match => {
+                    if (match.p1 === oldPeerId) match.p1 = newPeerId;
+                    if (match.p2 === oldPeerId) match.p2 = newPeerId;
+                    if (match.whitePlayer === oldPeerId) match.whitePlayer = newPeerId;
+                    if (match.blackPlayer === oldPeerId) match.blackPlayer = newPeerId;
+                    if (match.winner === oldPeerId) match.winner = newPeerId;
+                });
+            });
+
+            if (scores[oldPeerId]) {
+                scores[newPeerId] = scores[oldPeerId];
+                delete scores[oldPeerId];
+            }
+        }
+
+        function updateRoomState() {
+            let userList = getRoomUserList();
+            
+            if (isHost) {
+                if (activeWhite === myPeerId) myRole = 'w';
+                else if (activeBlack === myPeerId) myRole = 'b';
+                else myRole = 'spectator';
+                
+                let orientation = (myRole === 'b') ? 'black' : 'white';
+                initBoard(orientation);
+                setControlsState(true);
+                renderUserList(userList);
+                renderScoreTable();
+                renderBracketDisplay();
+            }
+
+            Object.keys(connections).forEach(id => {
+                let clientMatch = null;
+                if (tournamentData?.simultaneous) {
+                    const playerMatch = (tournamentData.rounds[tournamentData.currentRound] || []).find(m => m.whitePlayer === id || m.blackPlayer === id);
+                    clientMatch = playerMatch || getTournamentMatch(connections[id].selectedMatchId) || getTournamentMatch(selectedMatchId);
+                }
+                let role = 'spectator';
+                if (clientMatch) {
+                    if (id === clientMatch.whitePlayer) role = 'w';
+                    else if (id === clientMatch.blackPlayer) role = 'b';
+                } else if (id === activeWhite) role = 'w';
+                else if (id === activeBlack) role = 'b';
+
+                connections[id].send({
+                    type: 'room_state',
+                    role: role,
+                    playerMatchId: role === 'w' || role === 'b' ? clientMatch?.matchId || selectedMatchId : null,
+                    matchId: clientMatch?.matchId || selectedMatchId,
+                    fen: clientMatch?.fen || game.fen(),
+                    whiteNick: clientMatch ? userNicks[clientMatch.whitePlayer] : (activeWhite ? userNicks[activeWhite] : null),
+                    blackNick: clientMatch ? userNicks[clientMatch.blackPlayer] : (activeBlack ? userNicks[activeBlack] : null),
+                    clock: clientMatch?.clock || tournamentData?.clock || null,
+                    users: userList,
+                    scores: scores,
+                    userNicks: userNicks,
+                    playerQueenThemes: playerQueenThemes,
+                    tournamentActive: tournamentActive,
+                    tournamentData: tournamentData
+                });
+            });
+        }
+
+        function joinOnlineRoom() {
+            let roomId = sanitizeRoomCode(document.getElementById('joinRoomIdInput').value.trim());
+            if (!roomId) { alert('Digite o código da sala!'); return; }
+
+            mode = 'online';
+            isCpuMode = false;
+            isHost = false;
+            matchWhiteNick = null;
+            matchBlackNick = null;
+            myNick = getNick();
+            game.reset();
+            resetPeer();
+            saveOnlineSession(roomId);
+
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('roomDisplay').innerHTML = '⏳ <strong>ENTRANDO NA ARENA</strong> | Conectando à sala...';
+            connectionRejected = false;
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                myPeerId = id;
+                hostConn = peer.connect(roomId);
+
+                hostConn.on('open', () => hostConn.send({
+                    type: 'join',
+                    nick: myNick,
+                    sessionToken: getSessionToken(),
+                    queenTheme: selectedQueenTheme
+                }));
+                hostConn.on('data', (data) => handleClientReceivedData(data));
+                hostConn.on('close', () => {
+                    setControlsState(false);
+                    if (!connectionRejected) {
+                        addChatMessage('', 'Conexão perdida com a sala.', 'system');
+                    }
+                });
+            });
+
+            peer.on('error', (err) => {
+                let message = err && err.message ? err.message : 'Não foi possível conectar à sala.';
+                alert(`Erro ao conectar à sala: ${message}`);
+                setControlsState(false);
+            });
+        }
+
+        function handleClientReceivedData(data) {
+            if (data.type === 'room_state') {
+                myRole = data.role;
+                scores = data.scores || {};
+                userNicks = data.userNicks || {};
+                playerQueenThemes = data.playerQueenThemes || {};
+                playerQueenThemes[myPeerId] = selectedQueenTheme;
+                tournamentActive = data.tournamentActive;
+                tournamentData = data.tournamentData;
+                if (data.matchId) selectedMatchId = data.matchId;
+                playerMatchId = data.playerMatchId || ((myRole === 'w' || myRole === 'b') ? selectedMatchId : null);
+                if (tournamentData?.clock && data.clock) {
+                    tournamentData.clock = data.clock;
+                }
+                saveOnlineSession(document.getElementById('joinRoomIdInput').value.trim());
+
+                let orientation = (myRole === 'b') ? 'black' : 'white';
+                game.load(data.fen);
+                initBoard(orientation);
+                setControlsState(true);
+                renderUserList(data.users);
+                renderScoreTable();
+                renderBracketDisplay();
+                updateMatchSelector();
+                updateMatchBanner(data.whiteNick, data.blackNick);
+                startClockTicker();
+
+                let roleLabel = myRole === 'w' ? 'Jogador (Brancas)' : (myRole === 'b' ? 'Jogador (Pretas)' : 'Espectador');
+                document.getElementById('roomDisplay').style.display = 'block';
+                document.getElementById('roomDisplay').innerHTML = `✅ <strong>SALA CONECTADA</strong> | Papel: <u>${roleLabel}</u>`;
+                if (!queenSettingsOpenedForRoom) {
+                    queenSettingsOpenedForRoom = true;
+                    openQueenSettings();
+                }
+
+            } else if (data.type === 'move') {
+                if (data.matchId && tournamentData?.simultaneous && data.matchId !== selectedMatchId) return;
+                game.move(data.move);
+                if (tournamentData?.clock && data.clock) tournamentData.clock = data.clock;
+                if (tournamentData?.simultaneous) {
+                    const match = getTournamentMatch(data.matchId);
+                    if (match) {
+                        match.fen = data.fen || game.fen();
+                        if (data.matchState) Object.assign(match, data.matchState);
+                    }
+                }
+                board.position(game.fen());
+                updateStatus();
+                tocarSomMovimento();
+                if (data.check) tocarSomXeque();
+
+            } else if (data.type === 'chat') {
+                addChatMessage(data.nick, data.text);
+
+            } else if (data.type === 'sys_msg') {
+                addChatMessage('', data.text, 'system');
+                if (data.finishSound) tocarSomFinalPartida(data.checkmate);
+                if (data.tournamentWinner) showTournamentWinner(data.tournamentWinner);
+            } else if (data.type === 'error') {
+                connectionRejected = true;
+                alert(data.text);
+            }
+        }
+
+        function restoreSession() {
+            let saved = loadSessionState();
+            if (!saved) {
+                startOffline('local');
+                return;
+            }
+
+            if (saved.nick) document.getElementById('nickInput').value = saved.nick;
+            if (saved.color) document.getElementById('colorSelect').value = saved.color;
+
+            if (saved.mode === 'online' && saved.roomId && !saved.isHost) {
+                document.getElementById('joinRoomIdInput').value = saved.roomId;
+                joinOnlineRoom();
+                return;
+            }
+
+            if (saved.mode === 'online' && saved.roomId) {
+                document.getElementById('createRoomIdInput').value = saved.roomId;
+            }
+            startOffline(saved.submode === 'cpu' ? 'cpu' : 'local', saved.fen || null);
+        }
+
+        restoreSession();
+    </script>
+</body>
+</html>
