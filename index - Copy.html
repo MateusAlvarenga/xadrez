@@ -224,70 +224,13 @@
             background: #6c63ff;
         }
         .queen-settings-button:hover { background: #574fd6; }
-        .queen-gallery {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 8px;
-        }
-
-        .queen-option {
-            position: relative;
+        .queen-preview {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            min-width: 0;
-            padding: 8px 5px 6px;
-            border: 2px solid #4a4e69;
-            border-radius: 8px;
-            background: #343750;
-            color: #e0e1dd;
-            cursor: pointer;
-            transition: border-color 0.2s, background 0.2s, transform 0.2s;
+            justify-content: center;
+            gap: 16px;
+            margin: 8px 0 18px;
         }
-
-        .queen-option:hover,
-        .queen-option:focus-visible {
-            background: #3d405b;
-            border-color: #f77f00;
-            outline: none;
-            transform: translateY(-2px);
-        }
-
-        .queen-option.selected {
-            border-color: #ffd166;
-            box-shadow: 0 0 0 1px #ffd166, 0 4px 12px rgba(255, 209, 102, 0.2);
-        }
-
-        .queen-option-images {
-            position: relative;
-            width: 70px;
-            height: 70px;
-            max-width: 100%;
-            background: #f0d9b5;
-            border-radius: 6px;
-        }
-
-        .queen-option-images img {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            transition: opacity 0.2s;
-        }
-
-        .queen-option-images img:last-child { opacity: 0; }
-        .queen-option:hover .queen-option-images img:first-child,
-        .queen-option:focus-visible .queen-option-images img:first-child { opacity: 0; }
-        .queen-option:hover .queen-option-images img:last-child,
-        .queen-option:focus-visible .queen-option-images img:last-child { opacity: 1; }
-        .queen-option-name { font-size: 11px; font-weight: bold; text-transform: capitalize; }
-
-        @media (max-width: 420px) {
-            .queen-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
+        .queen-preview img { width: 52px; height: 52px; object-fit: contain; background: #f0d9b5; border-radius: 6px; }
 
         input, select { background: #fff; color: #333; outline: none; }
         .nick-input { border: 2px solid #4caf50; font-weight: bold; }
@@ -554,7 +497,7 @@
             padding: 6px;
             background: #1e1e24;
             gap: 6px;
-        }     
+        }
 
         .chat-input-area input { flex: 1; min-width: 0; }
 
@@ -948,9 +891,13 @@
         <div class="modal-backdrop" id="queenSettingsModal" role="dialog" aria-modal="true" aria-labelledby="queenSettingsTitle">
             <form class="modal-card" onsubmit="saveQueenSettings(event)">
                 <h2 id="queenSettingsTitle">♕ Escolha sua rainha</h2>
-                <div class="modal-field">
-                    <span>Estilo da peça</span>
-                    <div id="queenGallery" class="queen-gallery" role="radiogroup" aria-label="Opções de rainha"></div>
+                <label class="modal-field" for="queenThemeSelect">
+                    Estilo da peça
+                    <select id="queenThemeSelect" onchange="updateQueenPreview()"></select>
+                </label>
+                <div class="queen-preview" aria-label="Pré-visualização da rainha">
+                    <img id="queenPreviewWhite" alt="Rainha branca">
+                    <img id="queenPreviewBlack" alt="Rainha preta">
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-danger" onclick="closeQueenSettings()">Cancelar</button>
@@ -1096,7 +1043,6 @@
         let selectedQueenTheme = queenThemes[localStorage.getItem('chessQueenTheme')]
             ? localStorage.getItem('chessQueenTheme')
             : 'padrao';
-        let queenThemeDraft = selectedQueenTheme;
         let playerQueenThemes = {};
 
         const MAX_USERS = 20;
@@ -1570,39 +1516,20 @@
         }
 
         function populateQueenThemeOptions() {
-            const gallery = document.getElementById('queenGallery');
-            if (!gallery) return;
+            const select = document.getElementById('queenThemeSelect');
+            if (!select) return;
             const themeNames = ['padrao', ...Object.keys(queenThemes).filter(theme => theme !== 'padrao')];
-            queenThemeDraft = queenThemes[selectedQueenTheme] ? selectedQueenTheme : 'padrao';
-            gallery.innerHTML = themeNames.map(theme => {
-                const queen = queenThemes[theme];
-                const escapedTheme = escapeHtml(theme);
-                const selected = theme === queenThemeDraft;
-                return `
-                    <button type="button" class="queen-option${selected ? ' selected' : ''}"
-                        data-theme="${escapedTheme}" role="radio" aria-checked="${selected}"
-                        aria-label="Selecionar rainha ${escapedTheme}">
-                        <span class="queen-option-images" aria-hidden="true">
-                            <img src="${escapeHtml(queen.white)}" alt="">
-                            <img src="${escapeHtml(queen.black)}" alt="">
-                        </span>
-                        <span class="queen-option-name">${escapedTheme}</span>
-                    </button>
-                `;
-            }).join('');
-            gallery.querySelectorAll('.queen-option').forEach(option => {
-                option.addEventListener('click', () => selectQueenTheme(option.dataset.theme));
-            });
+            select.innerHTML = themeNames
+                .map(theme => `<option value="${escapeHtml(theme)}">${escapeHtml(theme)}</option>`)
+                .join('');
+            select.value = queenThemes[selectedQueenTheme] ? selectedQueenTheme : 'padrao';
+            updateQueenPreview();
         }
 
-        function selectQueenTheme(themeName) {
-            if (!queenThemes[themeName]) return;
-            queenThemeDraft = themeName;
-            document.querySelectorAll('.queen-option').forEach(option => {
-                const isSelected = option.dataset.theme === themeName;
-                option.classList.toggle('selected', isSelected);
-                option.setAttribute('aria-checked', String(isSelected));
-            });
+        function updateQueenPreview() {
+            const theme = queenThemes[document.getElementById('queenThemeSelect')?.value] || queenThemes.padrao;
+            document.getElementById('queenPreviewWhite').src = theme.white;
+            document.getElementById('queenPreviewBlack').src = theme.black;
         }
 
         function openQueenSettings() {
@@ -1616,7 +1543,7 @@
 
         function saveQueenSettings(event) {
             event.preventDefault();
-            selectedQueenTheme = queenThemeDraft;
+            selectedQueenTheme = document.getElementById('queenThemeSelect').value;
             localStorage.setItem('chessQueenTheme', selectedQueenTheme);
             playerQueenThemes[myPeerId] = selectedQueenTheme;
             closeQueenSettings();
