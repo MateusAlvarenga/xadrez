@@ -1,12 +1,31 @@
 {
-  "name": "railway-static-site",
-  "version": "1.0.0",
+  "name": "xadrez-centralizado",
+  "version": "0.1.0",
   "private": true,
-  "description": "Static HTML/CSS/JS site for Railway",
+  "type": "module",
   "scripts": {
-    "start": "serve . -l $PORT"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "start": "node server/index.mjs",
+    "start:preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "serve": "^14.2.4"
+    "@chrisoakman/chessboardjs": "^1.0.0",
+    "chess.js": "^0.10.3",
+    "jquery": "^3.7.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.32",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
   }
 }
