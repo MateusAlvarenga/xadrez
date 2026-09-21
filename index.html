@@ -800,7 +800,7 @@
 
     <div class="controls">
         <div class="online-lobby">
-            <input type="text" id="nickInput" class="nick-input" placeholder="Seu nickname" value="Jogador">
+            <input type="text" id="nickInput" class="nick-input" placeholder="Seu nickname" minlength="3">
 
             <div class="control-group lobby-action">
                 <input type="text" id="createRoomIdInput" placeholder="Código opcional">
@@ -1916,6 +1916,16 @@
         }
 
         function createOnlineRoom() {
+
+
+            <!-- validate form -->
+            let nickInput_value = document.getElementById('nickInput').value.trim();
+            let createRoomIdInput_value = document.getElementById('createRoomIdInput').value.trim();
+            if (!nickInput_value || !createRoomIdInput_value) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+
             mode = 'online';
             isCpuMode = false;
             isHost = true;
@@ -2719,6 +2729,10 @@
         }
 
         function joinOnlineRoom() {
+
+            let nickInput = document.getElementById('nickInput').value.trim();
+            if (!nickInput) { alert('Digite seu nome!'); return; }
+
             let roomId = sanitizeRoomCode(document.getElementById('joinRoomIdInput').value.trim());
             if (!roomId) { alert('Digite o código da sala!'); return; }
 
