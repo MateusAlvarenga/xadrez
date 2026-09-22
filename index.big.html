@@ -548,6 +548,30 @@
             border-bottom: 1px solid #4a4e69;
         }
 
+        .panel-header-with-action {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            text-align: left;
+        }
+
+        .refresh-users-button {
+            width: auto;
+            padding: 4px 8px;
+            background: #4a4e69;
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        .refresh-users-button:hover {
+            background: #5a6080;
+        }
+
+        .refresh-users-button:disabled {
+            opacity: 0.7;
+        }
+
         #userList, #bracketDisplay, #scoreTableContainer {
             padding: 8px;
             max-height: 130px;
@@ -991,7 +1015,17 @@
             </div>
 
             <div class="panel">
-                <div class="panel-header" id="userCountHeader">Pessoas na Sala (0/20)</div>
+                <div class="panel-header panel-header-with-action">
+                    <span id="userCountHeader">Pessoas na Sala (0/20)</span>
+                    <button
+                        type="button"
+                        class="refresh-users-button"
+                        id="refreshUsersButton"
+                        onclick="refreshRoomUsers()"
+                        aria-label="Atualizar lista de pessoas na sala"
+                        title="Atualizar lista de pessoas na sala"
+                    >↻</button>
+                </div>
                 <div id="userList">
                     <div style="text-align: center; color: #8d99ae;">Nenhuma sala ativa.</div>
                 </div>
@@ -1956,6 +1990,33 @@
             });
         }
 
+        function refreshRoomUsers() {
+            const button = document.getElementById('refreshUsersButton');
+            if (button) {
+                button.disabled = true;
+                button.innerText = '…';
+            }
+
+            if (mode !== 'online') {
+                renderUserList([]);
+                if (button) button.disabled = false;
+                return;
+            }
+
+            if (isHost) {
+                renderUserList(getRoomUserList());
+                updateRoomState();
+                if (button) button.disabled = false;
+                return;
+            }
+
+            if (hostConn?.open) {
+                hostConn.send({ type: 'refresh_users' });
+            } else if (button) {
+                button.disabled = false;
+            }
+        }
+
         function renderScoreTable() {
             let tbody = document.getElementById('scoreTableBody');
             tbody.innerHTML = '';
@@ -2034,11 +2095,26 @@
 
         function getRoomUserList() {
             let list = [];
-            if (activeWhite) list.push({ id: activeWhite, nick: userNicks[activeWhite], role: 'w', queuePos: 0 });
-            if (activeBlack) list.push({ id: activeBlack, nick: userNicks[activeBlack], role: 'b', queuePos: 0 });
+            let listedIds = new Set();
+
+            const addUser = (id, role, queuePos) => {
+                if (!id || listedIds.has(id) || !userNicks[id]) return;
+                listedIds.add(id);
+                list.push({ id: id, nick: userNicks[id], role: role, queuePos: queuePos });
+            };
+
+            addUser(activeWhite, 'w', 0);
+            addUser(activeBlack, 'b', 0);
             spectatorQueue.forEach((id, idx) => {
-                list.push({ id: id, nick: userNicks[id], role: 'spectator', queuePos: idx + 1 });
+                addUser(id, 'spectator', idx + 1);
             });
+
+            Object.keys(connections).forEach(id => {
+                if (connections[id]?.open) {
+                    addUser(id, 'spectator', list.length + 1);
+                }
+            });
+
             return list;
         }
 
@@ -2060,7 +2136,6 @@
         }
 
         function startOffline(submode = 'local', restoredFen = null) {
-            isLeavingRoom = false;
             mode = 'offline';
             myRole = 'offline';
             isCpuMode = (submode === 'cpu');
@@ -2108,6 +2183,7 @@
             if (!confirm('Você tem certeza que quer sair da sala? A partida e o progresso atual podem ser perdidos.')) return;
 
             isLeavingRoom = true;
+            sessionStorage.setItem('xadrez-intentional-leave', '1');
             localStorage.removeItem(SESSION_STORAGE_KEY);
             sessionStorage.removeItem('xadrez-web-token');
             mode = 'offline';
@@ -2130,6 +2206,8 @@
 
         function createOnlineRoom() {
 
+            isLeavingRoom = false;
+            sessionStorage.removeItem('xadrez-intentional-leave');
 
             <!-- validate form -->
             let nickInput_value = document.getElementById('nickInput').value.trim();
@@ -2553,6 +2631,8 @@
 
             } else if (data.type === 'leave') {
                 c.close();
+            } else if (data.type === 'refresh_users') {
+                updateRoomState();
             } else if (data.type === 'queen_theme') {
                 if (queenThemes[data.theme]) {
                     playerQueenThemes[c.peer] = data.theme;
@@ -2943,6 +3023,8 @@
 
         function joinOnlineRoom() {
 
+            isLeavingRoom = false;
+            sessionStorage.removeItem('xadrez-intentional-leave');
             let nickInput = document.getElementById('nickInput').value.trim();
             if (!nickInput) { alert('Digite seu nome!'); return; }
 
@@ -3022,6 +3104,11 @@
                 if (board) board.position(game.fen());
                 setControlsState(true);
                 renderUserList(data.users);
+                const refreshButton = document.getElementById('refreshUsersButton');
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+                    refreshButton.innerText = '↻';
+                }
                 renderScoreTable();
                 renderBracketDisplay();
                 updateMatchSelector();
@@ -3080,6 +3167,13 @@
         }
 
         function restoreSession() {
+            if (sessionStorage.getItem('xadrez-intentional-leave') === '1') {
+                sessionStorage.removeItem('xadrez-intentional-leave');
+                localStorage.removeItem(SESSION_STORAGE_KEY);
+                startOffline('local');
+                return;
+            }
+
             let saved = loadSessionState();
             if (!saved) {
                 startOffline('local');
