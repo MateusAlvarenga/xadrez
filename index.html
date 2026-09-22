@@ -231,6 +231,42 @@
             margin-top: 8px;
         }
 
+        .promotion-options {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .promotion-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 62px;
+            border: 2px solid #4a4e69;
+            border-radius: 10px;
+            background: #343750;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, transform 0.2s;
+        }
+
+        .promotion-option:hover,
+        .promotion-option:focus-visible {
+            background: #3d405b;
+            border-color: #f77f00;
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        .promotion-option .piece-label {
+            font-size: 16px;
+            line-height: 1;
+        }
+
         .queen-option {
             position: relative;
             display: flex;
@@ -342,6 +378,56 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+        }
+
+        .board-player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 54px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #2b2d42;
+            box-shadow: 0 5px 14px rgba(0, 0, 0, 0.35);
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .board-player-clock {
+            flex: 0 0 auto;
+            margin-left: auto;
+            padding: 4px 10px;
+            border-radius: 4px;
+            background: #171821;
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .board-player-clock.active {
+            background: #ffffff;
+            color: #171821;
+        }
+
+        .board-player-clock.warning {
+            color: #ffb4a2;
+            animation: clock-pulse 1s infinite;
+        }
+
+        .board-player-clock.active.warning {
+            color: #d62828;
+        }
+
+        .board-player .match-player {
+            min-width: 0;
+        }
+
+        .board-player .match-player-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .match-banner {
@@ -763,6 +849,10 @@
                 font-size: 21px;
             }
 
+            .board-player-clock {
+                font-size: 19px;
+            }
+
             .sidebar {
                 gap: 10px;
             }
@@ -839,15 +929,23 @@
 
     <div class="main-container">
         <div class="board-column">
-            <div class="match-banner" id="matchBanner">
-                <div class="match-banner-label">Partida atual</div>
-                <div class="match-banner-players" id="matchBannerPlayers">Aguardando jogadores</div>
-                <div class="match-banner-turn" id="matchBannerTurn">Entre em uma sala para começar</div>
-                <div class="match-clock" id="matchClock" aria-label="Relógio da partida">—</div>
+            <div class="board-player board-player-top" id="boardPlayerTop" aria-label="Jogador de cima">
+                <span class="match-player-name">Aguardando jogadores</span>
+                <span class="board-player-clock" id="boardClockTop">—</span>
             </div>
 
             <div class="board-wrapper">
                 <div id="board"></div>
+            </div>
+
+            <div class="board-player board-player-bottom" id="boardPlayerBottom" aria-label="Jogador de baixo">
+                <span class="match-player-name">Aguardando jogadores</span>
+                <span class="board-player-clock" id="boardClockBottom">—</span>
+            </div>
+
+            <div class="match-banner" id="matchBanner">
+                <div class="match-banner-label">Partida atual</div>
+                <div class="match-banner-turn" id="matchBannerTurn">Entre em uma sala para começar</div>
             </div>
 
             <div class="panel chat-container">
@@ -958,7 +1056,15 @@
             </div>
             </form>
         </div>
-    </div>
+
+            <div class="modal-backdrop" id="promotionModal" role="dialog" aria-modal="true" aria-labelledby="promotionTitle">
+                <div class="modal-card">
+                    <h2 id="promotionTitle">♟️ Promoção do peão</h2>
+                    <p class="modal-winner-text" style="margin-bottom: 6px;">Escolha a peça para a qual deseja promover:</p>
+                    <div class="promotion-options" id="promotionOptions"></div>
+                </div>
+            </div>
+        </div>
 
     <!-- Bibliotecas CDN -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1252,17 +1358,105 @@
             }
         }
 
-        function onDrop (source, target) {
+        let pendingPromotionMove = null;
+
+        function openPromotionModal(callback) {
+            const modal = document.getElementById('promotionModal');
+            const options = document.getElementById('promotionOptions');
+            if (!modal || !options) {
+                callback('q');
+                return;
+            }
+
+            const pieces = [
+                { code: 'q', label: '♛', name: 'Rainha' },
+                { code: 'r', label: '♜', name: 'Torre' },
+                { code: 'b', label: '♝', name: 'Bispo' },
+                { code: 'n', label: '♞', name: 'Cavalo' }
+            ];
+
+            options.innerHTML = pieces.map(piece => `
+                <button type="button" class="promotion-option" data-piece="${piece.code}" aria-label="Promover para ${piece.name}">
+                    <span class="piece-label">${piece.label}</span>
+                    <span>${piece.name}</span>
+                </button>
+            `).join('');
+
+            options.querySelectorAll('.promotion-option').forEach(button => {
+                button.addEventListener('click', () => {
+                    modal.classList.remove('open');
+                    callback(button.dataset.piece || 'q');
+                });
+            });
+
+            modal.classList.add('open');
+        }
+
+        function finalizePromotionMove(source, target, promotion) {
+            pendingPromotionMove = null;
             if (mode === 'online' && isHost) {
-                let accepted = handleGameMove(myPeerId, {
+                const accepted = handleGameMove(myPeerId, {
+                    from: source,
+                    to: target,
+                    promotion: promotion,
+                    matchId: selectedMatchId
+                });
+                if (!accepted) {
+                    board.position(game.fen());
+                    return 'snapback';
+                }
+                tocarSomMovimento();
+                return;
+            }
+
+            if (mode === 'online' && (!hostConn || !hostConn.open)) {
+                board.position(game.fen());
+                return 'snapback';
+            }
+
+            const move = game.move({ from: source, to: target, promotion: promotion });
+            if (move === null) {
+                board.position(game.fen());
+                return 'snapback';
+            }
+
+            saveOfflineState();
+            tocarSomMovimento();
+            if (game.in_check() && !game.in_checkmate()) tocarSomXeque();
+            updateStatus();
+
+            if (mode === 'online') {
+                const payload = { type: 'move', move: move, fen: game.fen(), matchId: selectedMatchId };
+                if (hostConn) hostConn.send(payload);
+            } else if (isCpuMode && !game.game_over()) {
+                window.setTimeout(makeCpuMove, 300);
+            }
+
+            return;
+        }
+
+        function onDrop (source, target) {
+            const piece = game.get(source);
+            const isPromotion = piece && piece.type === 'p' && ((piece.color === 'w' && target[1] === '8') || (piece.color === 'b' && target[1] === '1'));
+
+            if (pendingPromotionMove) return 'snapback';
+
+            if (isPromotion) {
+                pendingPromotionMove = { source, target };
+                openPromotionModal((promotion) => {
+                    finalizePromotionMove(source, target, promotion || 'q');
+                });
+                return 'snapback';
+            }
+
+            if (mode === 'online' && isHost) {
+                const accepted = handleGameMove(myPeerId, {
                     from: source,
                     to: target,
                     promotion: 'q',
                     matchId: selectedMatchId
                 });
-
                 if (!accepted) return 'snapback';
-
                 tocarSomMovimento();
                 return;
             }
@@ -1271,7 +1465,7 @@
                 return 'snapback';
             }
 
-            let move = game.move({ from: source, to: target, promotion: 'q' });
+            const move = game.move({ from: source, to: target, promotion: 'q' });
             if (move === null) return 'snapback';
 
             saveOfflineState();
@@ -1280,7 +1474,7 @@
             updateStatus();
 
             if (mode === 'online') {
-                let payload = { type: 'move', move: move, fen: game.fen(), matchId: selectedMatchId };
+                const payload = { type: 'move', move: move, fen: game.fen(), matchId: selectedMatchId };
                 if (hostConn) hostConn.send(payload);
             } else if (isCpuMode && !game.game_over()) {
                 window.setTimeout(makeCpuMove, 300);
@@ -1421,15 +1615,17 @@
         }
 
         function updateMatchBanner(whiteNick = null, blackNick = null) {
-            let playersEl = document.getElementById('matchBannerPlayers');
+            let topPlayerEl = document.getElementById('boardPlayerTop');
+            let bottomPlayerEl = document.getElementById('boardPlayerBottom');
             let turnEl = document.getElementById('matchBannerTurn');
-            if (!playersEl || !turnEl) return;
+            if (!topPlayerEl || !bottomPlayerEl || !turnEl) return;
 
             if (mode === 'offline') {
-                playersEl.innerHTML = isCpuMode
-                    ? '<span class="match-player"><span class="color-dot white" aria-label="Brancas"></span>VOCÊ</span> <span>vs</span> <span class="match-player"><span class="color-dot black" aria-label="Pretas"></span>Computador</span>'
-                    : '<span class="match-player"><span class="color-dot white" aria-label="Brancas"></span>Jogador 1</span> <span>vs</span> <span class="match-player"><span class="color-dot black" aria-label="Pretas"></span>Jogador 2</span>';
+                let white = isCpuMode ? (playerColor === 'w' ? 'VOCÊ' : 'Computador') : 'Jogador 1';
+                let black = isCpuMode ? (playerColor === 'b' ? 'VOCÊ' : 'Computador') : 'Jogador 2';
+                renderBoardPlayers(white, black);
                 turnEl.innerText = `Vez das ${game.turn() === 'w' ? 'Brancas' : 'Pretas'}`;
+                updateClockDisplay();
                 return;
             }
 
@@ -1440,20 +1636,31 @@
             if (!white && matchWhiteNick) white = matchWhiteNick;
             if (!black && matchBlackNick) black = matchBlackNick;
             if (!white || !black) {
-                playersEl.innerText = 'Aguardando jogadores';
+                topPlayerEl.innerText = 'Aguardando jogadores';
+                bottomPlayerEl.innerText = 'Aguardando jogadores';
                 turnEl.innerText = 'A partida começará quando dois jogadores estiverem prontos';
                 return;
             }
 
-            let whitePlayer = `<span class="match-player"><span class="color-dot white" aria-label="Brancas"></span>${myRole === 'w' ? '<strong>VOCÊ</strong>' : escapeHtml(white)}</span>`;
-            let blackPlayer = `<span class="match-player"><span class="color-dot black" aria-label="Pretas"></span>${myRole === 'b' ? '<strong>VOCÊ</strong>' : escapeHtml(black)}</span>`;
-            playersEl.innerHTML = `${whitePlayer} <span>vs</span> ${blackPlayer}`;
+            renderBoardPlayers(white, black);
 
             let turnName = game.turn() === 'w' ? white : black;
             turnEl.innerText = myRole === 'w' || myRole === 'b'
                 ? (game.turn() === myRole ? 'Sua vez' : `Vez de ${turnName}`)
                 : `Espectador · vez de ${turnName}`;
             updateClockDisplay();
+        }
+
+        function renderBoardPlayers(white, black) {
+            let topPlayerEl = document.getElementById('boardPlayerTop');
+            let bottomPlayerEl = document.getElementById('boardPlayerBottom');
+            if (!topPlayerEl || !bottomPlayerEl) return;
+
+            let whitePlayer = `<span class="match-player"><span class="color-dot white" aria-label="Brancas"></span><span class="match-player-name">${escapeHtml(white)}</span></span><span class="board-player-clock" id="boardClockWhite">—</span>`;
+            let blackPlayer = `<span class="match-player"><span class="color-dot black" aria-label="Pretas"></span><span class="match-player-name">${escapeHtml(black)}</span></span><span class="board-player-clock" id="boardClockBlack">—</span>`;
+            let isBlackOrientation = boardOrientation === 'black';
+            topPlayerEl.innerHTML = isBlackOrientation ? whitePlayer : blackPlayer;
+            bottomPlayerEl.innerHTML = isBlackOrientation ? blackPlayer : whitePlayer;
         }
 
         function formatClock(seconds) {
@@ -1483,19 +1690,26 @@
         }
 
         function updateClockDisplay() {
-            let clockEl = document.getElementById('matchClock');
-            if (!clockEl) return;
+            let whiteClockEl = document.getElementById('boardClockWhite');
+            let blackClockEl = document.getElementById('boardClockBlack');
+            if (!whiteClockEl || !blackClockEl) return;
             let clock = getDisplayedClock();
             if (!clock) {
-                clockEl.innerText = '∞ Sem limite';
-                clockEl.classList.remove('warning');
+                whiteClockEl.innerText = '∞';
+                blackClockEl.innerText = '∞';
+                whiteClockEl.classList.remove('active', 'warning');
+                blackClockEl.classList.remove('active', 'warning');
                 return;
             }
 
             let whiteSeconds = getClockSeconds('w');
             let blackSeconds = getClockSeconds('b');
-            clockEl.innerText = `♔ ${formatClock(whiteSeconds)}  ·  ${formatClock(blackSeconds)} ♚`;
-            clockEl.classList.toggle('warning', Math.min(whiteSeconds, blackSeconds) <= 10);
+            whiteClockEl.innerText = formatClock(whiteSeconds);
+            blackClockEl.innerText = formatClock(blackSeconds);
+            whiteClockEl.classList.toggle('active', (clock.activeColor || game.turn()) === 'w');
+            blackClockEl.classList.toggle('active', (clock.activeColor || game.turn()) === 'b');
+            whiteClockEl.classList.toggle('warning', whiteSeconds <= 10);
+            blackClockEl.classList.toggle('warning', blackSeconds <= 10);
         }
 
         function startClockTicker() {
